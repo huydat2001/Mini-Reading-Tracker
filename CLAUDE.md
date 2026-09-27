@@ -6,7 +6,7 @@
 - **Architecture**: 
   - Frontend: Vue 3 (Composition API).
   - Backend: Node.js (NestJS) acts as a PROXY to Open Library API. Frontend NEVER calls Open Library directly.
-  - Database: MySQL (Relational) via TypeORM / Prisma (tùy chọn ORM của dự án).
+  - Database: MySQL (Relational) via TypeORM
 
 ## 2. STRICT CODING STANDARDS
 
