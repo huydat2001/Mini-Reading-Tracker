@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: reading_tracker_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build:
+      context: ./backend
+    container_name: reading_tracker_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://${DB_USER}:${DB_PASS}@database:3306/${DB_NAME}
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: reading_tracker_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
