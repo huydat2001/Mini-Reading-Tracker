@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { BooksModule } from './books/books.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { redisStore } from 'cache-manager-redis-yet';
         } as TypeOrmModuleOptions;
       },
     }),
+    BooksModule,
   ],
 })
 export class AppModule {}
