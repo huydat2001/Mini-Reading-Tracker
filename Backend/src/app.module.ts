@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-import { BooksModule } from './books/books.module';
-import { LibraryModule } from './library/library.module';
 
 @Module({
   imports: [
@@ -33,32 +31,39 @@ import { LibraryModule } from './library/library.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
         const url = configService.get<string>('DATABASE_URL');
         if (url) {
           return {
-            type: 'mysql' as const,
+            type: 'mysql',
             url,
             autoLoadEntities: true,
             synchronize: false,
             logging: false,
-          };
+          } as TypeOrmModuleOptions;
         }
         return {
-          type: 'mysql' as const,
-          host: configService.get('DATABASE_HOST') || 'localhost',
-          port: parseInt(configService.get('DATABASE_PORT') || '3306', 10),
-          username: configService.get('DB_USER') || configService.get('DATABASE_USER'),
-          password: configService.get('DB_PASS') || configService.get('DATABASE_PASSWORD'),
-          database: configService.get('DB_NAME') || configService.get('DATABASE_NAME') || 'reading_tracker',
+          type: 'mysql',
+          host: configService.get<string>('DATABASE_HOST') || 'localhost',
+          port: parseInt(configService.get<string>('DATABASE_PORT') || '3306', 10),
+          username:
+            configService.get<string>('DB_USER') ||
+            configService.get<string>('DATABASE_USER') ||
+            'root',
+          password:
+            configService.get<string>('DB_PASS') ||
+            configService.get<string>('DATABASE_PASSWORD') ||
+            '',
+          database:
+            configService.get<string>('DB_NAME') ||
+            configService.get<string>('DATABASE_NAME') ||
+            'reading_tracker',
           autoLoadEntities: true,
           synchronize: false,
           logging: false,
-        };
+        } as TypeOrmModuleOptions;
       },
     }),
-    BooksModule,
-    LibraryModule,
   ],
 })
 export class AppModule {}
