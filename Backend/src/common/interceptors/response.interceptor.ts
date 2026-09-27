@@ -9,7 +9,14 @@ import { map } from 'rxjs/operators';
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<unknown> {
+    const request = context.switchToHttp().getRequest();
+    if (request?.url?.includes('/health')) {
+      return next.handle();
+    }
     return next.handle().pipe(
       map((data) => ({
         success: true,
