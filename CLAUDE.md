@@ -18,6 +18,10 @@
   - Class names: `PascalCase` (e.g., `BookService`).
   - Variables/Functions: `camelCase`.
 - **Validation**: Use DTOs (Data Transfer Objects) with `class-validator` and `class-transformer`. Enable global `ValidationPipe`.
+- **API Documentation (Swagger)**:
+  - Integrate `@nestjs/swagger` and setup the endpoint at `/api/docs` in `main.ts`.
+  - **DTOs**: ALL properties must be decorated with `@ApiProperty()` or `@ApiPropertyOptional()`, including examples and descriptions.
+  - **Controllers**: MUST use `@ApiTags()` to group endpoints, `@ApiOperation()` to describe the action, and `@ApiResponse()` to document expected HTTP status codes.
 - **API Response Format**: Use standard NestJS serialization or Interceptors to maintain a consistent JSON structure:
   ```json
   { "success": true/false, "data": null/object, "error": null/string, "message": "..." }
