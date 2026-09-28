@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { AppController } from './app.controller';
 import { BooksModule } from './books/books.module';
 import { LibraryModule } from './library/library.module';
 
@@ -13,22 +14,19 @@ import { LibraryModule } from './library/library.module';
       isGlobal: true,
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const redisUrl = configService.get<string>('REDIS_URL');
-        const redisHost = configService.get<string>('REDIS_HOST');
-        if (redisUrl || redisHost) {
-          try {
-            const store = await redisStore({
-              url:
-                redisUrl ||
-                `redis://${redisHost}:${configService.get('REDIS_PORT') || 6379}`,
-              ttl: 60 * 1000,
-            });
-            return { store } as any;
-          } catch (e) {
-            console.warn('[Cache] Redis connection failed, fallback to memory:', e);
-          }
-        }
-        return { ttl: 60 * 1000, max: 500 } as any;
+        const redisHost = configService.get<string>('REDIS_HOST') || '127.0.0.1';
+        const redisPort = configService.get<string>('REDIS_PORT') || '6379';
+        const redisUrl = configService.get<string>('REDIS_URL') || `redis://${redisHost}:${redisPort}`;
+        
+        console.log('🔄 Đang kết nối Redis (Chuẩn v5) tới:', redisUrl);
+
+        // Chuẩn v5 yêu cầu dùng await redisStore
+        const store = await redisStore({
+          url: redisUrl,
+          ttl: 5 * 60 * 1000, 
+        });
+
+        return { store };
       },
     }),
     TypeOrmModule.forRootAsync({
@@ -69,5 +67,6 @@ import { LibraryModule } from './library/library.module';
     BooksModule,
     LibraryModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
