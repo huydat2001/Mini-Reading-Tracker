@@ -64,7 +64,7 @@ export function useLibrary() {
       status: ReadingStatus
       pagesRead: number
       rating: number | null
-      notes: string
+      notes: string | null
     }>,
   ): Promise<LibraryEntry> {
     return updateLibrary(id, payload)
