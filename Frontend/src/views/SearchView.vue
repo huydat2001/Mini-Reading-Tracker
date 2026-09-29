@@ -5,10 +5,13 @@ import { useLibrary } from '../composables/useLibrary'
 import { addToLibrary } from '../api/library'
 import type { BookSearchItem } from '../types'
 import BookCard from '../components/BookCard.vue'
+import BookDetailDialog from '../components/BookDetailDialog.vue'
 
 const query = ref('')
 const addingIds = ref<Set<string>>(new Set())
 const snackbar = ref({ show: false, text: '', color: 'success' })
+const selectedBookId = ref<string | null>(null)
+const isDetailOpen = ref(false)
 
 const { books, total, page, loading, error, search } = useBooks()
 const { isInLibrary, refreshExistingIds } = useLibrary()
@@ -59,8 +62,13 @@ async function handleAdd(book: BookSearchItem) {
   }
 }
 
-function handleDetail(_book: BookSearchItem) {
-  snackbar.value = { show: true, text: 'Chi tiết sách sẽ có ở màn hình 2', color: 'info' }
+function handleDetail(book: BookSearchItem) {
+  selectedBookId.value = book.openLibraryId
+  isDetailOpen.value = true
+}
+
+function onBookAddedFromDetail() {
+  refreshExistingIds()
 }
 
 onMounted(() => {
@@ -156,5 +164,10 @@ onMounted(() => {
         <v-btn icon="mdi-close" variant="text" @click="snackbar.show = false" />
       </template>
     </v-snackbar>
+    <BookDetailDialog
+      v-model="isDetailOpen"
+      :open-library-id="selectedBookId"
+      @added="onBookAddedFromDetail"
+    />
   </div>
 </template>

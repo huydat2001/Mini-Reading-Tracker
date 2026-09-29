@@ -13,6 +13,7 @@ export async function searchBooks(
 }
 
 export async function getBookDetail(openLibraryId: string): Promise<BookDetail> {
-  const res = await api.get(`/books/${encodeURIComponent(openLibraryId)}`)
+  const cleanId = openLibraryId.replace(/^\/?works\//, '')
+  const res = await api.get(`/books/${encodeURIComponent(cleanId)}`)
   return unwrap<BookDetail>(res)
 }

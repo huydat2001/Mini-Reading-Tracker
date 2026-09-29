@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'library',
       component: () => import('../views/LibraryView.vue'),
     },
+    {
+      path: '/books/:key+',
+      name: 'book-detail',
+      component: () => import('../views/BookDetailView.vue'),
+    },
   ],
 })
 
