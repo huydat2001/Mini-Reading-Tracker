@@ -33,7 +33,7 @@ export async function updateLibrary(
     status: ReadingStatus
     pagesRead: number
     rating: number | null
-    notes: string
+    notes: string | null
   }>,
 ): Promise<LibraryEntry> {
   const res = await api.patch(`/library/${id}`, payload)
