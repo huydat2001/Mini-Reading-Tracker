@@ -50,7 +50,6 @@ const selectedBookId = ref<string | null>(null)
 const isDetailOpen = ref(false)
 
 // Advanced filter fields
-const filterTitle = ref('')
 const filterAuthor = ref('')
 const filterSubject = ref('')
 const filterLanguage = ref('')
@@ -79,7 +78,6 @@ const activeSubjectObj = computed(() =>
 // Check if any advanced filter is active
 const hasActiveFilters = computed(() => {
   return !!(
-    filterTitle.value.trim() ||
     filterAuthor.value.trim() ||
     filterSubject.value.trim() ||
     filterLanguage.value ||
@@ -91,7 +89,6 @@ const hasActiveFilters = computed(() => {
 
 const activeFilterCount = computed(() => {
   let count = 0
-  if (filterTitle.value.trim()) count++
   if (filterAuthor.value.trim()) count++
   if (filterSubject.value.trim()) count++
   if (filterLanguage.value) count++
@@ -105,7 +102,6 @@ let debounceTimer: ReturnType<typeof setTimeout> | undefined
 function buildSearchParams(): SearchParams {
   const params: SearchParams = {}
   if (query.value.trim()) params.q = query.value.trim()
-  if (filterTitle.value.trim()) params.title = filterTitle.value.trim()
   if (filterAuthor.value.trim()) params.author = filterAuthor.value.trim()
   if (filterSubject.value.trim()) params.subject = filterSubject.value.trim()
   if (filterLanguage.value) params.language = filterLanguage.value
@@ -169,11 +165,23 @@ function retry() {
 }
 
 function applyFilters() {
+  // Validate year range on client side
+  if (filterYearStart.value && filterYearEnd.value) {
+    const startNum = parseInt(filterYearStart.value, 10)
+    const endNum = parseInt(filterYearEnd.value, 10)
+    if (!isNaN(startNum) && !isNaN(endNum) && endNum < startNum) {
+      snackbar.value = {
+        show: true,
+        text: `"Năm đến" (${filterYearEnd.value}) không được nhỏ hơn "Năm từ" (${filterYearStart.value})`,
+        color: 'warning',
+      }
+      return
+    }
+  }
   triggerSearch(1)
 }
 
 function clearAllFilters(doSearch = true) {
-  filterTitle.value = ''
   filterAuthor.value = ''
   filterSubject.value = ''
   filterLanguage.value = ''
@@ -269,22 +277,9 @@ onMounted(() => {
 
             <v-expansion-panel-text>
               <v-row dense class="mt-1">
-                <!-- Title filter -->
-                <v-col cols="12" sm="6" md="4">
-                  <v-text-field
-                    v-model="filterTitle"
-                    label="Tiêu đề sách"
-                    prepend-inner-icon="mdi-format-title"
-                    density="compact"
-                    variant="outlined"
-                    clearable
-                    hide-details
-                    class="filter-field"
-                  />
-                </v-col>
 
                 <!-- Author filter -->
-                <v-col cols="12" sm="6" md="4">
+                <v-col cols="12" sm="6" md="6">
                   <v-text-field
                     v-model="filterAuthor"
                     label="Tác giả"
@@ -298,7 +293,7 @@ onMounted(() => {
                 </v-col>
 
                 <!-- Subject filter -->
-                <v-col cols="12" sm="6" md="4">
+                <v-col cols="12" sm="6" md="6">
                   <v-text-field
                     v-model="filterSubject"
                     label="Chủ đề"
@@ -403,16 +398,6 @@ onMounted(() => {
 
               <!-- Active Filter Chips -->
               <div v-if="hasActiveFilters" class="d-flex flex-wrap gap-1 mt-1 mb-1">
-                <v-chip
-                  v-if="filterTitle"
-                  closable
-                  size="x-small"
-                  color="indigo"
-                  variant="flat"
-                  @click:close="filterTitle = ''; applyFilters()"
-                >
-                  Tiêu đề: {{ filterTitle }}
-                </v-chip>
                 <v-chip
                   v-if="filterAuthor"
                   closable

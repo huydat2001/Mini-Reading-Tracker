@@ -84,14 +84,23 @@ export class LibraryService {
     return this.findById(saved.id);
   }
 
-  async list(status?: ReadingStatus): Promise<UserLibrary[]> {
-    const where: Record<string, unknown> = {};
-    if (status) where.status = status;
-    return this.libRepo.find({
-      where,
-      relations: { book: true },
-      order: { updatedAt: 'DESC' },
-    });
+  async list(status?: ReadingStatus, search?: string): Promise<UserLibrary[]> {
+    const qb = this.libRepo
+      .createQueryBuilder('lib')
+      .leftJoinAndSelect('lib.book', 'book')
+      .orderBy('lib.updatedAt', 'DESC');
+
+    if (status) {
+      qb.andWhere('lib.status = :status', { status });
+    }
+
+    if (search?.trim()) {
+      qb.andWhere('LOWER(book.title) LIKE LOWER(:search)', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    return qb.getMany();
   }
 
   async stats(): Promise<LibraryStats> {

@@ -9,6 +9,7 @@ type FilterTab = 'all' | ReadingStatus
 
 const activeTab = ref<FilterTab>('all')
 const busyId = ref<number | null>(null)
+const searchQuery = ref('')
 
 const {
   entries,
@@ -33,14 +34,27 @@ const snackbar = ref({
   color: 'success',
 })
 
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+
 async function loadData() {
   const statusParam = activeTab.value === 'all' ? undefined : activeTab.value
-  await Promise.all([fetchLibrary(statusParam), fetchStats()])
+  const searchParam = searchQuery.value.trim() || undefined
+  await Promise.all([fetchLibrary(statusParam, searchParam), fetchStats()])
 }
 
 watch(activeTab, () => {
   const statusParam = activeTab.value === 'all' ? undefined : activeTab.value
-  fetchLibrary(statusParam)
+  const searchParam = searchQuery.value.trim() || undefined
+  fetchLibrary(statusParam, searchParam)
+})
+
+watch(searchQuery, () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    const statusParam = activeTab.value === 'all' ? undefined : activeTab.value
+    const searchParam = searchQuery.value.trim() || undefined
+    fetchLibrary(statusParam, searchParam)
+  }, 400)
 })
 
 async function handleUpdate(
@@ -116,6 +130,7 @@ async function confirmDelete() {
 }
 
 const emptyMessage = computed(() => {
+  if (searchQuery.value.trim()) return `Không tìm thấy sách nào khớp với "${searchQuery.value}"`
   if (activeTab.value === 'want_to_read') return 'Chưa có cuốn sách nào trong danh sách "Muốn đọc"'
   if (activeTab.value === 'reading') return 'Bạn chưa có cuốn sách nào "Đang đọc"'
   if (activeTab.value === 'read') return 'Bạn chưa hoàn thành cuốn sách nào'
@@ -184,6 +199,24 @@ onMounted(() => {
       </v-col>
     </v-row>
 
+    <!-- Search Bar for Library -->
+    <v-row justify="center" class="mb-2">
+      <v-col cols="12" md="8" lg="6">
+        <v-text-field
+          v-model="searchQuery"
+          prepend-inner-icon="mdi-magnify"
+          label="Tìm kiếm sách trong tủ..."
+          placeholder="Nhập tên sách..."
+          clearable
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="rounded-lg"
+          :loading="loading && !!searchQuery.trim()"
+        />
+      </v-col>
+    </v-row>
+
     <!-- Filter Tabs -->
     <v-tabs
       v-model="activeTab"
@@ -235,10 +268,18 @@ onMounted(() => {
         <v-icon size="80" color="grey-lighten-1">mdi-bookshelf</v-icon>
         <p class="text-h6 text-grey mt-3">{{ emptyMessage }}</p>
         <p class="text-body-2 text-grey-lighten-1 mb-4">
-          Hãy tìm kiếm và thêm các cuốn sách yêu thích vào tủ sách của bạn.
+          <template v-if="searchQuery.trim()">
+            Hãy thử từ khóa khác hoặc xóa bộ lọc tìm kiếm.
+          </template>
+          <template v-else>
+            Hãy tìm kiếm và thêm các cuốn sách yêu thích vào tủ sách của bạn.
+          </template>
         </p>
-        <v-btn to="/" color="primary" prepend-icon="mdi-magnify" class="text-none">
+        <v-btn v-if="!searchQuery.trim()" to="/" color="primary" prepend-icon="mdi-magnify" class="text-none">
           Khám phá & Thêm sách
+        </v-btn>
+        <v-btn v-else variant="outlined" color="primary" prepend-icon="mdi-close" class="text-none" @click="searchQuery = ''">
+          Xóa tìm kiếm
         </v-btn>
       </v-col>
     </v-row>

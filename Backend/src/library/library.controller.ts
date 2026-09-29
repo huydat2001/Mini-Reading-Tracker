@@ -53,9 +53,18 @@ export class LibraryController {
     required: false,
     description: 'Lọc theo trạng thái',
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Tìm kiếm theo tên sách (LIKE, không phân biệt hoa/thường)',
+    example: 'harry',
+  })
   @ApiOkResponse({ description: 'Danh sách mục trong tủ kèm thông tin sách' })
-  list(@Query('status') status?: ReadingStatus) {
-    return this.libraryService.list(status);
+  list(
+    @Query('status') status?: ReadingStatus,
+    @Query('search') search?: string,
+  ) {
+    return this.libraryService.list(status, search);
   }
 
   @Get('stats')

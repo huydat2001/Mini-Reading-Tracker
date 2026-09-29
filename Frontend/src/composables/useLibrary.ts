@@ -26,11 +26,11 @@ export function useLibrary() {
     }
   }
 
-  async function fetchLibrary(status?: ReadingStatus): Promise<void> {
+  async function fetchLibrary(status?: ReadingStatus, search?: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      entries.value = await getLibrary(status)
+      entries.value = await getLibrary(status, search)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Lỗi tải tủ sách'
       entries.value = []

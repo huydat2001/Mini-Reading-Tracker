@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, Matches } from 'class-validator';
 
 export class SearchBooksDto {
   @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm chung', example: 'harry potter' })
@@ -27,14 +27,16 @@ export class SearchBooksDto {
   @IsString()
   language?: string;
 
-  @ApiPropertyOptional({ description: 'Năm xuất bản từ (VD: 1990)', example: '1990' })
+  @ApiPropertyOptional({ description: 'Năm xuất bản từ (phải là số nguyên 4 chữ số, VD: 1990)', example: '1990' })
   @IsOptional()
   @IsString()
+  @Matches(/^\d{4}$/, { message: 'yearStart phải là năm 4 chữ số (VD: 1990)' })
   yearStart?: string;
 
-  @ApiPropertyOptional({ description: 'Năm xuất bản đến (VD: 2020)', example: '2020' })
+  @ApiPropertyOptional({ description: 'Năm xuất bản đến (phải là số nguyên 4 chữ số, VD: 2020)', example: '2020' })
   @IsOptional()
   @IsString()
+  @Matches(/^\d{4}$/, { message: 'yearEnd phải là năm 4 chữ số (VD: 2020)' })
   yearEnd?: string;
 
   @ApiPropertyOptional({ description: 'Sắp xếp (new, old, random). Mặc định là relevance', enum: ['new', 'old', 'random'] })

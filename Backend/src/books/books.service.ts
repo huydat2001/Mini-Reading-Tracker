@@ -32,8 +32,17 @@ export class BooksService {
     if (dto.subject?.trim()) queryParts.push(`subject:"${dto.subject.trim()}"`);
     if (dto.language?.trim()) queryParts.push(`language:${dto.language.trim()}`);
 
-    // Xử lý khoảng thời gian năm xuất bản (Ví dụ: first_publish_year:[1990 TO 2020])
+    // Validate khoảng thời gian năm xuất bản
     if (dto.yearStart || dto.yearEnd) {
+      if (dto.yearStart && dto.yearEnd) {
+        const startNum = parseInt(dto.yearStart, 10);
+        const endNum = parseInt(dto.yearEnd, 10);
+        if (endNum < startNum) {
+          throw new BadRequestException(
+            `yearEnd (${dto.yearEnd}) không được nhỏ hơn yearStart (${dto.yearStart})`,
+          );
+        }
+      }
       const start = dto.yearStart || '*';
       const end = dto.yearEnd || '*';
       queryParts.push(`first_publish_year:[${start} TO ${end}]`);
