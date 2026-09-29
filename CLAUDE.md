@@ -32,11 +32,14 @@
 * **Proxy Rule**: All Open Library API calls must be handled within the Backend Service layer using `@nestjs/axios` (HttpModule).
 
 ### B. Frontend (Vue 3)
-
-* **Paradigm**: Use Functional Programming. STRICTLY DO NOT use OOP (Classes) for state management.
-* **Component Style**: ALWAYS use `<script setup>` syntax (Composition API) with TypeScript.
-* **State Management**: Use Vue `ref`, `reactive`, or `composables` (e.g., `useBooks()`).
-* **UI States**: Every API call must explicitly handle 3 states in the UI: `loading`, `error`, and `empty` (no results).
+- **Paradigm**: Use Functional Programming. STRICTLY DO NOT use OOP (Classes) for state management.
+- **Component Style**: ALWAYS use `<script setup>` syntax (Composition API) with TypeScript.
+- **State Management**: Use Vue `ref`, `reactive`, or `composables` (e.g., `useBooks()`).
+- **UI States**: Every API call must explicitly handle 3 states in the UI: `loading`, `error`, and `empty` (no results).
+- **UI/UX & Styling**: 
+  - **UI Framework**: STRICTLY use **Vuetify 3** components (e.g., `v-container`, `v-card`, `v-btn`, `v-text-field`). Avoid writing custom CSS unless strictly necessary.
+  - **Responsiveness**: MUST follow a Mobile-First approach. Use Vuetify's grid system (`v-row`, `v-col`) and display helpers. All layouts must display correctly on Mobile, Tablet, and Desktop.
+  - **User Feedback**: Use Vuetify's `v-snackbar` for toast notifications (success/error) and `v-progress-circular` or `loading` props on buttons during API calls.
 
 ### C. Database (MySQL)
 
