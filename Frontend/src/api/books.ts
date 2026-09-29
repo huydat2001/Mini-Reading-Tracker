@@ -1,13 +1,18 @@
 import api, { unwrap } from '../api/client'
-import type { BookSearchResult, BookDetail, SubjectResult } from '../types'
+import type { BookSearchResult, BookDetail, SubjectResult, SearchParams } from '../types'
 
 export async function searchBooks(
-  q: string,
-  page: number,
-  limit: number,
+  params: SearchParams | string,
+  page = 1,
+  limit = 20,
 ): Promise<BookSearchResult> {
+  const queryParams: Record<string, any> =
+    typeof params === 'string'
+      ? { q: params, page, limit }
+      : { ...params, page: params.page ?? page, limit: params.limit ?? limit }
+
   const res = await api.get('/books/search', {
-    params: { q, page, limit },
+    params: queryParams,
   })
   return unwrap<BookSearchResult>(res)
 }

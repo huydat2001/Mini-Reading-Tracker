@@ -41,6 +41,9 @@ export class BookDetailDto {
   @ApiProperty({ example: 'The Great Gatsby' })
   title: string;
 
+  @ApiPropertyOptional({ example: ['F. Scott Fitzgerald'], type: [String], nullable: true })
+  authorNames: string[] | null;
+
   @ApiPropertyOptional({ example: 'F. Scott Fitzgerald', nullable: true })
   authorName: string | null;
 

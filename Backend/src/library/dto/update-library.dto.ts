@@ -22,7 +22,7 @@ export class UpdateLibraryDto {
 
   @ApiPropertyOptional({
     example: 50,
-    description: 'Số trang đã đọc (>= 0 và <= tổng số trang)',
+    description: 'Số trang đã đọc (>= 0 và <= tổng số trang). Phải bổ sung totalPages trước nếu sách chưa có.',
   })
   @IsOptional()
   @IsInt()
@@ -47,4 +47,13 @@ export class UpdateLibraryDto {
   @MinLength(0)
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({
+    example: 320,
+    description: 'Bổ sung tổng số trang cho sách (khi sách từ Open Library thiếu thông tin này). Phải > 0.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  totalPages?: number;
 }

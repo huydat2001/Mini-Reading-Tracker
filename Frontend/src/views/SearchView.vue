@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useBooks } from '../composables/useBooks'
 import { useLibrary } from '../composables/useLibrary'
 import { addToLibrary } from '../api/library'
-import type { BookSearchItem } from '../types'
+import type { BookSearchItem, SearchParams } from '../types'
 import BookCard from '../components/BookCard.vue'
 import BookListItem from '../components/BookListItem.vue'
 import BookDetailDialog from '../components/BookDetailDialog.vue'
@@ -22,6 +22,25 @@ const subjects = [
   { key: 'adventure', name: 'Adventure', icon: 'mdi-compass', color: 'green-darken-2' },
 ]
 
+const sortOptions = [
+  { title: 'Liên quan nhất', value: '' },
+  { title: 'Mới nhất trước', value: 'new' },
+  { title: 'Cũ nhất trước', value: 'old' },
+  { title: 'Ngẫu nhiên', value: 'random' },
+]
+
+const languageOptions = [
+  { title: 'Tất cả ngôn ngữ', value: '' },
+  { title: 'Tiếng Anh', value: 'eng' },
+  { title: 'Tiếng Việt', value: 'vie' },
+  { title: 'Tiếng Pháp', value: 'fre' },
+  { title: 'Tiếng Đức', value: 'ger' },
+  { title: 'Tiếng Tây Ban Nha', value: 'spa' },
+  { title: 'Tiếng Nhật', value: 'jpn' },
+  { title: 'Tiếng Trung', value: 'chi' },
+  { title: 'Tiếng Hàn', value: 'kor' },
+]
+
 const query = ref('')
 const selectedSubject = ref<string>('love')
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -29,6 +48,15 @@ const addingIds = ref<Set<string>>(new Set())
 const snackbar = ref({ show: false, text: '', color: 'success' })
 const selectedBookId = ref<string | null>(null)
 const isDetailOpen = ref(false)
+
+// Advanced filter fields
+const filterAuthor = ref('')
+const filterSubject = ref('')
+const filterLanguage = ref('')
+const filterYearStart = ref('')
+const filterYearEnd = ref('')
+const filterSort = ref('')
+const showFilters = ref(false)
 
 const {
   books,
@@ -42,18 +70,54 @@ const {
 const { isInLibrary, refreshExistingIds } = useLibrary()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
-const hasSearched = computed(() => query.value.trim().length > 0)
+const hasSearched = computed(() => query.value.trim().length > 0 || hasActiveFilters.value)
 const activeSubjectObj = computed(() =>
   subjects.find((s) => s.key === selectedSubject.value) || { name: selectedSubject.value, icon: 'mdi-tag' },
 )
 
+// Check if any advanced filter is active
+const hasActiveFilters = computed(() => {
+  return !!(
+    filterAuthor.value.trim() ||
+    filterSubject.value.trim() ||
+    filterLanguage.value ||
+    filterYearStart.value ||
+    filterYearEnd.value ||
+    filterSort.value
+  )
+})
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filterAuthor.value.trim()) count++
+  if (filterSubject.value.trim()) count++
+  if (filterLanguage.value) count++
+  if (filterYearStart.value || filterYearEnd.value) count++
+  if (filterSort.value) count++
+  return count
+})
+
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+function buildSearchParams(): SearchParams {
+  const params: SearchParams = {}
+  if (query.value.trim()) params.q = query.value.trim()
+  if (filterAuthor.value.trim()) params.author = filterAuthor.value.trim()
+  if (filterSubject.value.trim()) params.subject = filterSubject.value.trim()
+  if (filterLanguage.value) params.language = filterLanguage.value
+  if (filterYearStart.value) params.yearStart = filterYearStart.value
+  if (filterYearEnd.value) params.yearEnd = filterYearEnd.value
+  if (filterSort.value) params.sort = filterSort.value
+  return params
+}
 
 function triggerSearch(newPage = 1) {
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
-    if (query.value.trim().length > 0) {
-      search(query.value, newPage)
+    const params = buildSearchParams()
+    const hasAnyParam = Object.keys(params).length > 0
+    if (hasAnyParam) {
+      search(params, newPage)
     } else if (selectedSubject.value) {
       fetchBySubject(selectedSubject.value, newPage)
     }
@@ -62,8 +126,10 @@ function triggerSearch(newPage = 1) {
 
 watch(query, (val) => {
   if (!val || !val.trim()) {
-    if (selectedSubject.value) {
+    if (!hasActiveFilters.value && selectedSubject.value) {
       fetchBySubject(selectedSubject.value, 1)
+    } else if (hasActiveFilters.value) {
+      triggerSearch(1)
     }
     return
   }
@@ -75,12 +141,14 @@ function onSelectSubject(key: string) {
   if (query.value.trim().length > 0) {
     query.value = ''
   }
+  clearAllFilters(false)
   fetchBySubject(key, 1)
 }
 
 function onPageChange(newPage: number) {
   if (hasSearched.value) {
-    search(query.value, newPage)
+    const params = buildSearchParams()
+    search(params, newPage)
   } else if (selectedSubject.value) {
     fetchBySubject(selectedSubject.value, newPage)
   }
@@ -89,9 +157,39 @@ function onPageChange(newPage: number) {
 
 function retry() {
   if (hasSearched.value) {
-    search(query.value, page.value)
+    const params = buildSearchParams()
+    search(params, page.value)
   } else if (selectedSubject.value) {
     fetchBySubject(selectedSubject.value, page.value)
+  }
+}
+
+function applyFilters() {
+  // Validate year range on client side
+  if (filterYearStart.value && filterYearEnd.value) {
+    const startNum = parseInt(filterYearStart.value, 10)
+    const endNum = parseInt(filterYearEnd.value, 10)
+    if (!isNaN(startNum) && !isNaN(endNum) && endNum < startNum) {
+      snackbar.value = {
+        show: true,
+        text: `"Năm đến" (${filterYearEnd.value}) không được nhỏ hơn "Năm từ" (${filterYearStart.value})`,
+        color: 'warning',
+      }
+      return
+    }
+  }
+  triggerSearch(1)
+}
+
+function clearAllFilters(doSearch = true) {
+  filterAuthor.value = ''
+  filterSubject.value = ''
+  filterLanguage.value = ''
+  filterYearStart.value = ''
+  filterYearEnd.value = ''
+  filterSort.value = ''
+  if (doSearch) {
+    triggerSearch(1)
   }
 }
 
@@ -154,6 +252,209 @@ onMounted(() => {
       </v-col>
     </v-row>
 
+    <!-- Advanced Filters Panel -->
+    <v-row justify="center" class="mt-n4 mb-1">
+      <v-col cols="12" md="9" lg="8">
+        <v-expansion-panels v-model="showFilters" variant="accordion" flat>
+          <v-expansion-panel
+            value="filters"
+            elevation="0"
+            rounded="lg"
+            class="filter-panel"
+          >
+            <v-expansion-panel-title class="filter-panel-title py-2">
+              <div class="d-flex align-center gap-2">
+                <v-icon icon="mdi-filter-variant" size="small" color="primary" />
+                <span class="text-body-2 font-weight-medium">Bộ lọc nâng cao</span>
+                <v-badge
+                  v-if="activeFilterCount > 0"
+                  :content="activeFilterCount"
+                  color="primary"
+                  inline
+                />
+              </div>
+            </v-expansion-panel-title>
+
+            <v-expansion-panel-text>
+              <v-row dense class="mt-1">
+
+                <!-- Author filter -->
+                <v-col cols="12" sm="6" md="6">
+                  <v-text-field
+                    v-model="filterAuthor"
+                    label="Tác giả"
+                    prepend-inner-icon="mdi-account-edit"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                    class="filter-field"
+                  />
+                </v-col>
+
+                <!-- Subject filter -->
+                <v-col cols="12" sm="6" md="6">
+                  <v-text-field
+                    v-model="filterSubject"
+                    label="Chủ đề"
+                    prepend-inner-icon="mdi-tag-outline"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                    class="filter-field"
+                  />
+                </v-col>
+
+                <!-- Language select -->
+                <v-col cols="12" sm="6" md="4">
+                  <v-select
+                    v-model="filterLanguage"
+                    :items="languageOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Ngôn ngữ"
+                    prepend-inner-icon="mdi-translate"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                    class="filter-field"
+                  />
+                </v-col>
+
+                <!-- Year range -->
+                <v-col cols="6" sm="3" md="2">
+                  <v-text-field
+                    v-model="filterYearStart"
+                    label="Năm từ"
+                    prepend-inner-icon="mdi-calendar-start"
+                    density="compact"
+                    variant="outlined"
+                    type="number"
+                    hide-details
+                    class="filter-field"
+                    placeholder="VD: 1990"
+                  />
+                </v-col>
+                <v-col cols="6" sm="3" md="2">
+                  <v-text-field
+                    v-model="filterYearEnd"
+                    label="Năm đến"
+                    prepend-inner-icon="mdi-calendar-end"
+                    density="compact"
+                    variant="outlined"
+                    type="number"
+                    hide-details
+                    class="filter-field"
+                    placeholder="VD: 2024"
+                  />
+                </v-col>
+
+                <!-- Sort select -->
+                <v-col cols="12" sm="6" md="4">
+                  <v-select
+                    v-model="filterSort"
+                    :items="sortOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Sắp xếp theo"
+                    prepend-inner-icon="mdi-sort"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                    class="filter-field"
+                  />
+                </v-col>
+              </v-row>
+
+              <!-- Filter Actions -->
+              <v-row dense class="mt-3 mb-1">
+                <v-col cols="12" class="d-flex justify-end gap-2">
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    color="grey"
+                    prepend-icon="mdi-close-circle-outline"
+                    :disabled="!hasActiveFilters"
+                    @click="clearAllFilters(true)"
+                    class="text-none"
+                  >
+                    Xóa bộ lọc
+                  </v-btn>
+                  <v-btn
+                    variant="flat"
+                    size="small"
+                    color="primary"
+                    prepend-icon="mdi-magnify"
+                    @click="applyFilters"
+                    class="text-none"
+                  >
+                    Áp dụng lọc
+                  </v-btn>
+                </v-col>
+              </v-row>
+
+              <!-- Active Filter Chips -->
+              <div v-if="hasActiveFilters" class="d-flex flex-wrap gap-1 mt-1 mb-1">
+                <v-chip
+                  v-if="filterAuthor"
+                  closable
+                  size="x-small"
+                  color="teal"
+                  variant="flat"
+                  @click:close="filterAuthor = ''; applyFilters()"
+                >
+                  Tác giả: {{ filterAuthor }}
+                </v-chip>
+                <v-chip
+                  v-if="filterSubject"
+                  closable
+                  size="x-small"
+                  color="deep-purple"
+                  variant="flat"
+                  @click:close="filterSubject = ''; applyFilters()"
+                >
+                  Chủ đề: {{ filterSubject }}
+                </v-chip>
+                <v-chip
+                  v-if="filterLanguage"
+                  closable
+                  size="x-small"
+                  color="blue"
+                  variant="flat"
+                  @click:close="filterLanguage = ''; applyFilters()"
+                >
+                  Ngôn ngữ: {{ languageOptions.find(l => l.value === filterLanguage)?.title || filterLanguage }}
+                </v-chip>
+                <v-chip
+                  v-if="filterYearStart || filterYearEnd"
+                  closable
+                  size="x-small"
+                  color="orange"
+                  variant="flat"
+                  @click:close="filterYearStart = ''; filterYearEnd = ''; applyFilters()"
+                >
+                  Năm: {{ filterYearStart || '*' }} – {{ filterYearEnd || '*' }}
+                </v-chip>
+                <v-chip
+                  v-if="filterSort"
+                  closable
+                  size="x-small"
+                  color="pink"
+                  variant="flat"
+                  @click:close="filterSort = ''; applyFilters()"
+                >
+                  Sắp xếp: {{ sortOptions.find(s => s.value === filterSort)?.title || filterSort }}
+                </v-chip>
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </v-col>
+    </v-row>
+
     <!-- Subjects Keywords Section -->
     <v-row justify="center" class="mt-n2 mb-3">
       <v-col cols="12" md="10" lg="9">
@@ -200,7 +501,13 @@ onMounted(() => {
           </template>
           <template v-else-if="hasSearched">
             <span>
-              Kết quả tìm kiếm cho <strong class="text-grey-darken-4">"{{ query }}"</strong>:
+              Kết quả tìm kiếm
+              <template v-if="query.trim()">cho <strong class="text-grey-darken-4">"{{ query }}"</strong></template>
+              <template v-if="hasActiveFilters">
+                <v-icon icon="mdi-filter" size="x-small" class="mx-1" />
+                <span class="text-caption">(có bộ lọc)</span>
+              </template>
+              :
               <strong class="text-primary">{{ total }}</strong> cuốn (trang {{ page }}/{{ totalPages }})
             </span>
           </template>
@@ -332,3 +639,26 @@ onMounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+.filter-panel {
+  background: rgba(var(--v-theme-surface), 0.95) !important;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+}
+
+.filter-panel-title {
+  min-height: 40px !important;
+}
+
+.filter-field :deep(.v-field) {
+  font-size: 0.875rem;
+}
+
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+</style>

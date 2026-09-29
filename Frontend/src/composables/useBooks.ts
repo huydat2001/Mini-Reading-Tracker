@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { searchBooks, getBookDetail, getBooksBySubject } from '../api/books'
-import type { BookSearchItem, BookDetail } from '../types'
+import type { BookSearchItem, BookDetail, SearchParams } from '../types'
 
 export function useBooks() {
   const books = ref<BookSearchItem[]>([])
@@ -10,18 +10,21 @@ export function useBooks() {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const currentSubject = ref<string | null>(null)
+  const activeParams = ref<SearchParams | string | null>(null)
 
-  async function search(q: string, targetPage = 1): Promise<void> {
-    if (!q.trim()) {
+  async function search(params: SearchParams | string, targetPage = 1): Promise<void> {
+    const isStr = typeof params === 'string'
+    if (isStr && !params.trim()) {
       books.value = []
       total.value = 0
       return
     }
+    activeParams.value = params
     currentSubject.value = null
     loading.value = true
     error.value = null
     try {
-      const result = await searchBooks(q.trim(), targetPage, limit.value)
+      const result = await searchBooks(params, targetPage, limit.value)
       books.value = result.items
       total.value = result.total
       page.value = result.page
@@ -81,6 +84,7 @@ export function useBooks() {
     loading,
     error,
     currentSubject,
+    activeParams,
     search,
     fetchBySubject,
     detail,

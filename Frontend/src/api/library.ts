@@ -10,9 +10,12 @@ export interface AddBookPayload {
   status?: ReadingStatus
 }
 
-export async function getLibrary(status?: ReadingStatus): Promise<LibraryEntry[]> {
+export async function getLibrary(status?: ReadingStatus, search?: string): Promise<LibraryEntry[]> {
+  const params: Record<string, string> = {}
+  if (status) params.status = status
+  if (search?.trim()) params.search = search.trim()
   const res = await api.get('/library', {
-    params: status ? { status } : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
   })
   return unwrap<LibraryEntry[]>(res)
 }
@@ -34,6 +37,7 @@ export async function updateLibrary(
     pagesRead: number
     rating: number | null
     notes: string | null
+    totalPages: number
   }>,
 ): Promise<LibraryEntry> {
   const res = await api.patch(`/library/${id}`, payload)

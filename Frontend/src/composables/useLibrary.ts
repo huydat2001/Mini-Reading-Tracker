@@ -26,11 +26,11 @@ export function useLibrary() {
     }
   }
 
-  async function fetchLibrary(status?: ReadingStatus): Promise<void> {
+  async function fetchLibrary(status?: ReadingStatus, search?: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      entries.value = await getLibrary(status)
+      entries.value = await getLibrary(status, search)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Lỗi tải tủ sách'
       entries.value = []
@@ -65,6 +65,7 @@ export function useLibrary() {
       pagesRead: number
       rating: number | null
       notes: string | null
+      totalPages: number
     }>,
   ): Promise<LibraryEntry> {
     return updateLibrary(id, payload)
