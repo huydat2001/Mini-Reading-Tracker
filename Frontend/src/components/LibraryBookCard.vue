@@ -16,6 +16,7 @@ const emit = defineEmits<{
       pagesRead: number
       rating: number | null
       notes: string | null
+      totalPages: number
     }>,
   ): void
   (e: 'delete', entry: LibraryEntry): void
@@ -33,6 +34,10 @@ const currentRating = ref<number | undefined>(props.entry.rating ?? undefined)
 const currentNotes = ref<string>(props.entry.notes || '')
 const isEditingNotes = ref(false)
 
+// Total pages editing
+const totalPagesInput = ref<number | null>(props.entry.book.totalPages)
+const isEditingTotalPages = ref(false)
+
 watch(
   () => props.entry,
   (newEntry) => {
@@ -40,14 +45,17 @@ watch(
     pagesInput.value = newEntry.pagesRead
     currentRating.value = newEntry.rating ?? undefined
     currentNotes.value = newEntry.notes || ''
+    totalPagesInput.value = newEntry.book.totalPages
+    isEditingTotalPages.value = false
   },
   { deep: true },
 )
 
 const totalPages = computed(() => props.entry.book.totalPages)
+const hasTotalPages = computed(() => totalPages.value !== null && totalPages.value > 0)
 
 const progressPercent = computed(() => {
-  if (!totalPages.value || totalPages.value <= 0) return 0
+  if (!hasTotalPages.value || !totalPages.value) return 0
   const pct = Math.round((props.entry.pagesRead / totalPages.value) * 100)
   return Math.min(100, Math.max(0, pct))
 })
@@ -73,17 +81,31 @@ function onStatusChange(newStatus: ReadingStatus) {
 }
 
 function onPagesBlurOrEnter() {
+  if (!hasTotalPages.value) return // Shouldn't happen due to disabled state, but guard
+
   let val = Number(pagesInput.value)
   if (isNaN(val) || val < 0) {
     val = 0
   }
-  if (totalPages.value && totalPages.value > 0 && val > totalPages.value) {
+  if (totalPages.value && val > totalPages.value) {
     val = totalPages.value
   }
   pagesInput.value = val
   if (val !== props.entry.pagesRead) {
     emit('update', props.entry.id, { pagesRead: val })
   }
+}
+
+function saveTotalPages() {
+  const val = Number(totalPagesInput.value)
+  if (isNaN(val) || val <= 0) return
+  emit('update', props.entry.id, { totalPages: val })
+  isEditingTotalPages.value = false
+}
+
+function cancelTotalPagesEdit() {
+  totalPagesInput.value = props.entry.book.totalPages
+  isEditingTotalPages.value = false
 }
 
 function onRatingChange(newRating: string | number) {
@@ -174,52 +196,154 @@ function cancelNotes() {
 
       <!-- Progress Section -->
       <div class="my-2">
-        <div class="d-flex align-center justify-space-between text-caption mb-1">
-          <span class="font-weight-medium text-grey-darken-2">Tiến độ đọc:</span>
-          <span class="font-weight-bold text-primary">
-            {{ entry.pagesRead }} / {{ totalPages ? totalPages : '?' }} trang
-            <span v-if="totalPages">({{ progressPercent }}%)</span>
-          </span>
-        </div>
+        <!-- Case 1: totalPages is available → show progress bar -->
+        <template v-if="hasTotalPages">
+          <div class="d-flex align-center justify-space-between text-caption mb-1">
+            <span class="font-weight-medium text-grey-darken-2">Tiến độ đọc:</span>
+            <span class="font-weight-bold text-primary">
+              {{ entry.pagesRead }} / {{ totalPages }} trang
+              ({{ progressPercent }}%)
+            </span>
+          </div>
 
-        <v-progress-linear
-          :model-value="progressPercent"
-          height="8"
-          rounded
-          :color="entry.status === 'read' ? 'success' : 'primary'"
-          class="mb-2"
-        />
-
-        <!-- Input Pages Read -->
-        <div class="d-flex align-center gap-2 mt-2">
-          <v-text-field
-            v-model.number="pagesInput"
-            type="number"
-            density="compact"
-            variant="outlined"
-            label="Trang đã đọc"
-            hide-details
-            style="max-width: 140px;"
-            :min="0"
-            :max="totalPages || undefined"
-            :disabled="busy"
-            @blur="onPagesBlurOrEnter"
-            @keyup.enter="onPagesBlurOrEnter"
+          <v-progress-linear
+            :model-value="progressPercent"
+            height="8"
+            rounded
+            :color="entry.status === 'read' ? 'success' : 'primary'"
+            class="mb-2"
           />
-          <v-btn
-            size="small"
+
+          <!-- Input Pages Read -->
+          <div class="d-flex align-center gap-2 mt-2">
+            <v-text-field
+              v-model.number="pagesInput"
+              type="number"
+              density="compact"
+              variant="outlined"
+              label="Trang đã đọc"
+              hide-details
+              style="max-width: 140px;"
+              :min="0"
+              :max="totalPages || undefined"
+              :disabled="busy"
+              @blur="onPagesBlurOrEnter"
+              @keyup.enter="onPagesBlurOrEnter"
+            />
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="primary"
+              class="text-none"
+              :disabled="busy || pagesInput === entry.pagesRead"
+              @click="onPagesBlurOrEnter"
+            >
+              Lưu
+            </v-btn>
+            <span v-if="totalPages && pagesInput >= totalPages" class="text-caption text-success d-flex align-center">
+              <v-icon icon="mdi-check" size="small" class="me-1" /> Hoàn thành
+            </span>
+          </div>
+
+          <!-- Allow editing totalPages even when already set -->
+          <div class="mt-2">
+            <template v-if="!isEditingTotalPages">
+              <v-btn
+                variant="text"
+                size="x-small"
+                color="grey"
+                prepend-icon="mdi-pencil-outline"
+                class="text-none"
+                @click="isEditingTotalPages = true"
+              >
+                Sửa tổng số trang ({{ totalPages }})
+              </v-btn>
+            </template>
+            <template v-else>
+              <div class="d-flex align-center gap-2">
+                <v-text-field
+                  v-model.number="totalPagesInput"
+                  type="number"
+                  density="compact"
+                  variant="outlined"
+                  label="Tổng số trang"
+                  hide-details
+                  style="max-width: 140px;"
+                  :min="1"
+                  @keyup.enter="saveTotalPages"
+                />
+                <v-btn
+                  size="small"
+                  variant="tonal"
+                  color="primary"
+                  class="text-none"
+                  :disabled="busy || !totalPagesInput || totalPagesInput <= 0"
+                  @click="saveTotalPages"
+                >
+                  Lưu
+                </v-btn>
+                <v-btn
+                  size="small"
+                  variant="text"
+                  color="grey"
+                  class="text-none"
+                  @click="cancelTotalPagesEdit"
+                >
+                  Hủy
+                </v-btn>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Case 2: totalPages is null → show text only + prompt to add -->
+        <template v-else>
+          <div class="d-flex align-center justify-space-between text-caption mb-1">
+            <span class="font-weight-medium text-grey-darken-2">Tiến độ đọc:</span>
+            <span class="font-weight-bold text-grey">
+              Đã đọc: {{ entry.pagesRead }} trang
+            </span>
+          </div>
+
+          <!-- Alert to add totalPages -->
+          <v-alert
+            type="info"
             variant="tonal"
-            color="primary"
-            class="text-none"
-            :disabled="busy || pagesInput === entry.pagesRead"
-            @click="onPagesBlurOrEnter"
+            density="compact"
+            class="mb-2 text-caption"
+            icon="mdi-information-outline"
           >
-            Lưu
-          </v-btn>
-          <span v-if="totalPages && pagesInput >= totalPages" class="text-caption text-success d-flex align-center">
-            <v-icon icon="mdi-check" size="small" class="me-1" /> Hoàn thành
-          </span>
-        </div>
+            Sách chưa có thông tin tổng số trang. Hãy bổ sung để theo dõi tiến độ đọc.
+          </v-alert>
+
+          <!-- Input to add totalPages -->
+          <div class="d-flex align-center gap-2">
+            <v-text-field
+              v-model.number="totalPagesInput"
+              type="number"
+              density="compact"
+              variant="outlined"
+              label="Nhập tổng số trang"
+              placeholder="VD: 320"
+              hide-details
+              style="max-width: 180px;"
+              :min="1"
+              prepend-inner-icon="mdi-book-open-variant"
+              @keyup.enter="saveTotalPages"
+            />
+            <v-btn
+              size="small"
+              variant="flat"
+              color="primary"
+              class="text-none"
+              prepend-icon="mdi-check"
+              :disabled="busy || !totalPagesInput || totalPagesInput <= 0"
+              @click="saveTotalPages"
+            >
+              Bổ sung
+            </v-btn>
+          </div>
+        </template>
       </div>
 
       <v-divider class="my-3" />

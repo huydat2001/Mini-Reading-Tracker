@@ -64,6 +64,7 @@ async function handleUpdate(
     pagesRead: number
     rating: number | null
     notes: string | null
+    totalPages: number
   }>,
 ) {
   busyId.value = id

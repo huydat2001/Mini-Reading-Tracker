@@ -65,6 +65,7 @@ export function useLibrary() {
       pagesRead: number
       rating: number | null
       notes: string | null
+      totalPages: number
     }>,
   ): Promise<LibraryEntry> {
     return updateLibrary(id, payload)

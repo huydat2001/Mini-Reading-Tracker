@@ -142,26 +142,35 @@ export class LibraryService {
     const entry = await this.findById(id);
     const book = entry.book;
 
+    // 1. Xử lý cập nhật totalPages trước (lưu vào bảng books)
+    if (dto.totalPages !== undefined) {
+      book.totalPages = dto.totalPages;
+      await this.bookRepo.save(book);
+    }
+
+    // 2. Xử lý pagesRead — bắt buộc phải có totalPages trước
     if (dto.pagesRead !== undefined) {
       if (dto.pagesRead < 0) {
         throw new BadRequestException('pagesRead không được âm');
       }
-      if (book.totalPages !== null && book.totalPages > 0) {
-        if (dto.pagesRead > book.totalPages) {
-          throw new BadRequestException(
-            `pagesRead (${dto.pagesRead}) vượt quá tổng số trang (${book.totalPages})`,
-          );
-        }
-      } else if (dto.pagesRead > 0 && (book.totalPages === null || book.totalPages === 0)) {
-        // Cho phép nếu chưa biết tổng trang, chỉ chặn giá trị âm
+
+      // Kiểm tra sách đã có totalPages chưa (sau khi update ở bước 1)
+      if (book.totalPages === null || book.totalPages <= 0) {
+        throw new BadRequestException(
+          'Sách chưa có tổng số trang. Vui lòng bổ sung totalPages trước khi cập nhật số trang đã đọc.',
+        );
       }
+
+      if (dto.pagesRead > book.totalPages) {
+        throw new BadRequestException(
+          `pagesRead (${dto.pagesRead}) vượt quá tổng số trang (${book.totalPages})`,
+        );
+      }
+
       entry.pagesRead = dto.pagesRead;
 
-      if (
-        book.totalPages !== null &&
-        dto.pagesRead === book.totalPages &&
-        book.totalPages > 0
-      ) {
+      // Auto-transition: đọc xong → status "read" + finishedAt
+      if (dto.pagesRead === book.totalPages && book.totalPages > 0) {
         entry.status = ReadingStatus.READ;
         entry.finishedAt = entry.finishedAt ?? new Date();
       }

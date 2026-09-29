@@ -37,6 +37,7 @@ export async function updateLibrary(
     pagesRead: number
     rating: number | null
     notes: string | null
+    totalPages: number
   }>,
 ): Promise<LibraryEntry> {
   const res = await api.patch(`/library/${id}`, payload)
