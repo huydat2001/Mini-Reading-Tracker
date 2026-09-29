@@ -9,6 +9,7 @@ import { HttpService } from '@nestjs/axios';
 import { Cache } from 'cache-manager';
 import { firstValueFrom } from 'rxjs';
 import { BookDetailDto, BookSearchResultDto } from './dto/book-response.dto';
+import { SearchBooksDto } from './dto/search-books.dto';
 
 const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
 
@@ -19,48 +20,68 @@ export class BooksService {
   constructor(
     private readonly httpService: HttpService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {}
+  ) { }
 
-  async search(
-    q: string,
-    page: number,
-    limit: number,
-  ): Promise<BookSearchResultDto> {
-    if (!q?.trim()) {
-      throw new BadRequestException('Tham số q (từ khóa tìm kiếm) là bắt buộc');
+  async search(dto: SearchBooksDto): Promise<BookSearchResultDto> {
+    // 1. Build mảng các điều kiện truy vấn
+    const queryParts: string[] = [];
+
+    if (dto.q?.trim()) queryParts.push(dto.q.trim());
+    if (dto.title?.trim()) queryParts.push(`title:"${dto.title.trim()}"`);
+    if (dto.author?.trim()) queryParts.push(`author:"${dto.author.trim()}"`);
+    if (dto.subject?.trim()) queryParts.push(`subject:"${dto.subject.trim()}"`);
+    if (dto.language?.trim()) queryParts.push(`language:${dto.language.trim()}`);
+
+    // Xử lý khoảng thời gian năm xuất bản (Ví dụ: first_publish_year:[1990 TO 2020])
+    if (dto.yearStart || dto.yearEnd) {
+      const start = dto.yearStart || '*';
+      const end = dto.yearEnd || '*';
+      queryParts.push(`first_publish_year:[${start} TO ${end}]`);
     }
-    const normalized = q.trim().toLowerCase();
-    const cacheKey = `books:search:${normalized}:${page}:${limit}`;
 
+    // Nối các điều kiện lại (Open Library tự hiểu khoảng trắng là AND/Kết hợp)
+    const finalQuery = queryParts.join(' ');
+
+    if (!finalQuery) {
+      throw new BadRequestException('Phải cung cấp ít nhất một điều kiện tìm kiếm (q, title, author...)');
+    }
+
+    // 2. Chuẩn hóa phân trang và sắp xếp
+    const page = Math.max(1, parseInt(dto.page || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(dto.limit || '20', 10)));
+    const sort = dto.sort || 'relevance'; // 'relevance' là mặc định của OL
+
+    // 3. Xử lý Cache
+    // Cache key bao gồm toàn bộ query string, sắp xếp và phân trang
+    const cacheKey = `books:search:${Buffer.from(finalQuery).toString('base64')}:${sort}:${page}:${limit}`;
     const cached = await this.safeGet<BookSearchResultDto>(cacheKey);
     if (cached) return cached;
 
+    // 4. Gọi API Open Library
     const url = `${OPEN_LIBRARY_BASE}/search.json`;
+    const apiParams: Record<string, any> = {
+      q: finalQuery,
+      page,
+      limit,
+      fields: 'key,title,author_name,cover_i,first_publish_year',
+    };
+    if (dto.sort) apiParams.sort = dto.sort; // Chỉ gửi tham số sort nếu có
+
     const res = await firstValueFrom(
       this.httpService.get(url, {
-        params: { q: normalized, page, limit, fields: 'key,title,author_name,cover_i,first_publish_year' },
+        params: apiParams,
         timeout: 8000,
       }),
     );
 
-    const data = res.data as {
-      numFound: number;
-      docs: Array<{
-        key: string;
-        title: string;
-        author_name?: string[];
-        cover_i?: number;
-        first_publish_year?: number;
-      }>;
-    };
+    const data = res.data as any;
 
-    const items = (data.docs || []).map((d) => ({
+    // 5. Format kết quả trả về
+    const items = (data.docs || []).map((d: any) => ({
       openLibraryId: d.key,
       title: d.title,
-      authorName: d.author_name?.[0] ?? null,
-      coverUrl: d.cover_i
-        ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg`
-        : null,
+      authorName: d.author_name?.length ? d.author_name.join(', ') : null,
+      coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : null,
       publishYear: d.first_publish_year ?? null,
     }));
 
@@ -104,10 +125,14 @@ export class BooksService {
     const totalPages = (w.number_of_pages as number) ?? null;
     const publishYear = this.extractYear(w);
 
+    const authorNames = await this.resolveAuthorNames(w);
+    const authorName = authorNames?.length ? authorNames.join(', ') : null;
+
     const detail: BookDetailDto = {
       openLibraryId: normalized,
       title,
-      authorName: await this.resolveAuthorName(w),
+      authorNames,
+      authorName,
       coverUrl,
       description,
       subjects: subjects.slice(0, 20),
@@ -137,19 +162,30 @@ export class BooksService {
     return m ? parseInt(m[1], 10) : null;
   }
 
-  private async resolveAuthorName(
+  private async resolveAuthorNames(
     w: Record<string, unknown>,
-  ): Promise<string | null> {
+  ): Promise<string[] | null> {
     const authors = w.authors as Array<{ author?: { key?: string } }> | undefined;
-    const firstKey = authors?.[0]?.author?.key;
-    if (!firstKey) return null;
+    if (!authors || !authors.length) return null;
     try {
-      const res = await firstValueFrom(
-        this.httpService.get(`${OPEN_LIBRARY_BASE}${firstKey}.json`, {
-          timeout: 5000,
+      const names = await Promise.all(
+        authors.map(async (a) => {
+          const key = a.author?.key;
+          if (!key) return null;
+          try {
+            const res = await firstValueFrom(
+              this.httpService.get(`${OPEN_LIBRARY_BASE}${key}.json`, {
+                timeout: 5000,
+              }),
+            );
+            return (res.data as { name?: string })?.name ?? null;
+          } catch {
+            return null;
+          }
         }),
       );
-      return (res.data as { name?: string })?.name ?? null;
+      const filtered = names.filter((n): n is string => Boolean(n));
+      return filtered.length > 0 ? filtered : null;
     } catch {
       return null;
     }
@@ -172,7 +208,7 @@ export class BooksService {
     if (cached) return cached;
 
     const url = `${OPEN_LIBRARY_BASE}/subjects/${normalized}.json`;
-    
+
     try {
       const res = await firstValueFrom(
         this.httpService.get(url, {
@@ -187,7 +223,9 @@ export class BooksService {
       const items = (data.works || []).map((w: any) => ({
         openLibraryId: w.key,
         title: w.title,
-        authorName: w.authors?.[0]?.name ?? null,
+        authorName: w.authors?.length
+          ? w.authors.map((a: any) => a.name).filter(Boolean).join(', ')
+          : null,
         // Chú ý: Subjects API thường trả về 'cover_id' thay vì 'cover_i'
         coverUrl: w.cover_id
           ? `https://covers.openlibrary.org/b/id/${w.cover_id}-L.jpg`

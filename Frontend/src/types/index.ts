@@ -24,10 +24,24 @@ export interface SubjectResult {
   offset: number
 }
 
+export interface SearchParams {
+  q?: string
+  title?: string
+  author?: string
+  subject?: string
+  language?: string
+  yearStart?: string
+  yearEnd?: string
+  sort?: string
+  page?: number
+  limit?: number
+}
+
 export interface BookDetail {
   openLibraryId: string
   title: string
   authorName: string | null
+  authorNames?: string[] | null
   coverUrl: string | null
   description: string | null
   subjects: string[]
