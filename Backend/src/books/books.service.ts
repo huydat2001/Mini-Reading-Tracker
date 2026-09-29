@@ -155,6 +155,74 @@ export class BooksService {
     }
   }
 
+  async getBooksBySubject(
+    subject: string,
+    limit: number,
+    offset: number,
+    details: boolean,
+  ): Promise<any> {
+    if (!subject?.trim()) {
+      throw new BadRequestException('Tham số subject là bắt buộc');
+    }
+    // Xử lý subject thành dạng lowercase và thay khoảng trắng bằng gạch dưới (VD: "science fiction" -> "science_fiction")
+    const normalized = subject.trim().toLowerCase().replace(/\s+/g, '_');
+    const cacheKey = `books:subject:${normalized}:${limit}:${offset}:${details}`;
+
+    const cached = await this.safeGet<any>(cacheKey);
+    if (cached) return cached;
+
+    const url = `${OPEN_LIBRARY_BASE}/subjects/${normalized}.json`;
+    
+    try {
+      const res = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { limit, offset, details: details ? 'true' : undefined },
+          timeout: 8000,
+        }),
+      );
+
+      const data = res.data as Record<string, any>;
+
+      // Map lại cấu trúc works cho tương đồng với kết quả search
+      const items = (data.works || []).map((w: any) => ({
+        openLibraryId: w.key,
+        title: w.title,
+        authorName: w.authors?.[0]?.name ?? null,
+        // Chú ý: Subjects API thường trả về 'cover_id' thay vì 'cover_i'
+        coverUrl: w.cover_id
+          ? `https://covers.openlibrary.org/b/id/${w.cover_id}-L.jpg`
+          : null,
+        publishYear: w.first_publish_year ?? null,
+      }));
+
+      const result = {
+        subjectKey: data.key,
+        subjectName: data.name,
+        workCount: data.work_count,
+        items,
+        limit,
+        offset,
+      };
+
+      // Đính kèm metadata nếu details=true
+      if (details) {
+        Object.assign(result, {
+          authors: data.authors ?? [],
+          publishers: data.publishers ?? [],
+          places: data.places ?? [],
+          times: data.times ?? [],
+          relatedSubjects: data.subjects ?? [],
+        });
+      }
+
+      await this.safeSet(cacheKey, result, 5 * 60 * 1000);
+      return result;
+    } catch (error) {
+      this.logger.error(`Lỗi khi gọi Subjects API cho [${normalized}]:`, error);
+      throw new BadRequestException('Không thể lấy dữ liệu chủ đề hoặc chủ đề không tồn tại');
+    }
+  }
+
   private async safeGet<T>(key: string): Promise<T | undefined> {
     try {
       return (await this.cacheManager.get<T>(key)) ?? undefined;
