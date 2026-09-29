@@ -24,7 +24,7 @@ const cover = computed(
   <v-card elevation="2" class="mb-3 rounded-lg overflow-hidden transition-swing">
     <div class="d-flex flex-column flex-sm-row align-sm-center pa-3 gap-3">
       <!-- Book Cover -->
-      <div class="d-flex justify-center justify-sm-start flex-shrink-0">
+      <div class="d-flex justify-center justify-sm-start flex-shrink-0 me-4">
         <v-card
           elevation="1"
           class="rounded overflow-hidden cursor-pointer"
@@ -78,7 +78,7 @@ const cover = computed(
           color="secondary"
           size="small"
           prepend-icon="mdi-information-outline"
-          class="text-none"
+          class="text-none me-4"
           @click="emit('detail', book)"
         >
           Chi tiết
