@@ -5,7 +5,8 @@ node_modules/
 /Frontend/node_modules/
 /Backend/node_modules/
 /Backend/package-lock.json
-
+/Frontend/package-lock.json
+/Frontend/node_modules/
 # ==============================
 # 2. Thư mục build và file biên dịch
 # ==============================
