@@ -15,6 +15,15 @@ export interface BookSearchResult {
   limit: number
 }
 
+export interface SubjectResult {
+  subjectKey: string
+  subjectName: string
+  workCount: number
+  items: BookSearchItem[]
+  limit: number
+  offset: number
+}
+
 export interface BookDetail {
   openLibraryId: string
   title: string

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { searchBooks, getBookDetail } from '../api/books'
+import { searchBooks, getBookDetail, getBooksBySubject } from '../api/books'
 import type { BookSearchItem, BookDetail } from '../types'
 
 export function useBooks() {
@@ -9,6 +9,7 @@ export function useBooks() {
   const limit = ref(20)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const currentSubject = ref<string | null>(null)
 
   async function search(q: string, targetPage = 1): Promise<void> {
     if (!q.trim()) {
@@ -16,6 +17,7 @@ export function useBooks() {
       total.value = 0
       return
     }
+    currentSubject.value = null
     loading.value = true
     error.value = null
     try {
@@ -25,6 +27,26 @@ export function useBooks() {
       page.value = result.page
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Lỗi tìm kiếm'
+      books.value = []
+      total.value = 0
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchBySubject(subject: string, targetPage = 1): Promise<void> {
+    if (!subject.trim()) return
+    currentSubject.value = subject
+    loading.value = true
+    error.value = null
+    try {
+      const offset = (targetPage - 1) * limit.value
+      const result = await getBooksBySubject(subject.trim(), limit.value, offset, false)
+      books.value = result.items
+      total.value = result.workCount
+      page.value = targetPage
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Lỗi tải sách theo chủ đề'
       books.value = []
       total.value = 0
     } finally {
@@ -58,7 +80,9 @@ export function useBooks() {
     limit,
     loading,
     error,
+    currentSubject,
     search,
+    fetchBySubject,
     detail,
     detailLoading,
     detailError,
