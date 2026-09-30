@@ -28,7 +28,7 @@ import { ReadingStatus } from './entities/user-library.entity';
 @ApiTags('library')
 @Controller('library')
 export class LibraryController {
-  constructor(private readonly libraryService: LibraryService) {}
+  constructor(private readonly libraryService: LibraryService) { }
 
   @Post()
   @ApiOperation({

@@ -247,7 +247,7 @@ onMounted(() => {
           placeholder="VD: Harry Potter, Dune, Sapiens..."
           clearable
           :loading="loading"
-          class="elevation-1 rounded-lg"
+          class="rounded-lg"
         />
       </v-col>
     </v-row>

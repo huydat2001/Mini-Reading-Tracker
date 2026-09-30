@@ -17,13 +17,13 @@ import { LibraryModule } from './library/library.module';
         const redisHost = configService.get<string>('REDIS_HOST') || '127.0.0.1';
         const redisPort = configService.get<string>('REDIS_PORT') || '6379';
         const redisUrl = configService.get<string>('REDIS_URL') || `redis://${redisHost}:${redisPort}`;
-        
+
         console.log('🔄 Đang kết nối Redis (Chuẩn v5) tới:', redisUrl);
 
         // Chuẩn v5 yêu cầu dùng await redisStore
         const store = await redisStore({
           url: redisUrl,
-          ttl: 5 * 60 * 1000, 
+          ttl: 5 * 60 * 1000,
         });
 
         return { store };
@@ -40,12 +40,15 @@ import { LibraryModule } from './library/library.module';
             autoLoadEntities: true,
             synchronize: false,
             logging: false,
+            ssl: {
+              rejectUnauthorized: true,
+            },
           } as TypeOrmModuleOptions;
         }
         return {
           type: 'mysql',
-          host: configService.get<string>('DATABASE_HOST') || 'localhost',
-          port: parseInt(configService.get<string>('DATABASE_PORT') || '3306', 10),
+          host: configService.get<string>('DB_HOST') || 'localhost',
+          port: parseInt(configService.get<string>('DB_PORT') || '3306', 10),
           username:
             configService.get<string>('DB_USER') ||
             configService.get<string>('DATABASE_USER') ||
@@ -61,6 +64,9 @@ import { LibraryModule } from './library/library.module';
           autoLoadEntities: true,
           synchronize: false,
           logging: false,
+          ssl: {
+            rejectUnauthorized: true,
+          },
         } as TypeOrmModuleOptions;
       },
     }),
@@ -69,4 +75,4 @@ import { LibraryModule } from './library/library.module';
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }
