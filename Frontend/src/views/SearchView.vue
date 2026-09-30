@@ -9,17 +9,17 @@ import BookListItem from '../components/BookListItem.vue'
 import BookDetailDialog from '../components/BookDetailDialog.vue'
 
 const subjects = [
-  { key: 'love', name: 'Love', icon: 'mdi-heart', color: 'pink' },
-  { key: 'romance', name: 'Romance', icon: 'mdi-heart-multiple', color: 'red' },
-  { key: 'fiction', name: 'Fiction', icon: 'mdi-book-open-page-variant', color: 'indigo' },
-  { key: 'fantasy', name: 'Fantasy', icon: 'mdi-creation', color: 'deep-purple' },
-  { key: 'science', name: 'Science', icon: 'mdi-atom', color: 'teal' },
-  { key: 'history', name: 'History', icon: 'mdi-history', color: 'brown' },
-  { key: 'mystery', name: 'Mystery', icon: 'mdi-incognito', color: 'blue-grey' },
-  { key: 'philosophy', name: 'Philosophy', icon: 'mdi-brain', color: 'amber-darken-3' },
-  { key: 'psychology', name: 'Psychology', icon: 'mdi-head-heart', color: 'cyan-darken-2' },
-  { key: 'biography', name: 'Biography', icon: 'mdi-account-star', color: 'deep-orange' },
-  { key: 'adventure', name: 'Adventure', icon: 'mdi-compass', color: 'green-darken-2' },
+  { key: 'love', name: 'Tình yêu', icon: 'mdi-heart', color: 'pink' },
+  { key: 'romance', name: 'Lãng mạn', icon: 'mdi-heart-multiple', color: 'red' },
+  { key: 'fiction', name: 'Tiểu thuyết', icon: 'mdi-book-open-page-variant', color: 'indigo' },
+  { key: 'fantasy', name: 'Kỳ ảo', icon: 'mdi-creation', color: 'deep-purple' },
+  { key: 'science', name: 'Khoa học', icon: 'mdi-atom', color: 'teal' },
+  { key: 'history', name: 'Lịch sử', icon: 'mdi-history', color: 'brown' },
+  { key: 'mystery', name: 'Bí ẩn', icon: 'mdi-incognito', color: 'blue-grey' },
+  { key: 'philosophy', name: 'Triết học', icon: 'mdi-brain', color: 'amber-darken-3' },
+  { key: 'psychology', name: 'Tâm lý', icon: 'mdi-head-heart', color: 'cyan-darken-2' },
+  { key: 'biography', name: 'Tiểu sử', icon: 'mdi-account-star', color: 'deep-orange' },
+  { key: 'adventure', name: 'Phiêu lưu', icon: 'mdi-compass', color: 'green-darken-2' },
 ]
 
 const sortOptions = [
@@ -75,7 +75,6 @@ const activeSubjectObj = computed(() =>
   subjects.find((s) => s.key === selectedSubject.value) || { name: selectedSubject.value, icon: 'mdi-tag' },
 )
 
-// Check if any advanced filter is active
 const hasActiveFilters = computed(() => {
   return !!(
     filterAuthor.value.trim() ||
@@ -165,7 +164,6 @@ function retry() {
 }
 
 function applyFilters() {
-  // Validate year range on client side
   if (filterYearStart.value && filterYearEnd.value) {
     const startNum = parseInt(filterYearStart.value, 10)
     const endNum = parseInt(filterYearEnd.value, 10)
@@ -236,398 +234,405 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <!-- Search Bar -->
-    <v-row justify="center">
-      <v-col cols="12" md="9" lg="8">
+  <div class="search-view-container">
+    <!-- Header Hero Section -->
+    <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between gap-3 mb-6">
+      <div>
+        <div class="d-flex align-center gap-2 mb-1">
+          <div class="hero-badge">
+            <v-icon icon="mdi-compass-outline" color="primary" size="22" />
+          </div>
+          <h1 class="text-h5 text-md-h4 font-weight-bold page-title mb-0">
+            Khám Phá Sách
+          </h1>
+        </div>
+        <p class="text-body-2 text-grey-darken-1 mb-0 ps-sm-1">
+          Tìm kiếm hàng triệu đầu sách từ kho tàng Open Library, lọc theo chủ đề và thêm vào tủ cá nhân.
+        </p>
+      </div>
+
+      <div class="d-flex align-center gap-2">
+        <v-btn
+          to="/library"
+          variant="outlined"
+          color="grey-darken-1"
+          class="btn-pill text-none"
+          size="small"
+          prepend-icon="mdi-bookshelf"
+        >
+          Xem tủ sách
+        </v-btn>
+      </div>
+    </div>
+
+    <!-- Search Bar Card -->
+    <div class="search-box-card pa-3 pa-sm-4 bg-white rounded-xl border mb-4">
+      <div class="d-flex align-center gap-2">
         <v-text-field
           v-model="query"
           prepend-inner-icon="mdi-magnify"
-          label="Tìm kiếm sách (Open Library)..."
-          placeholder="VD: Harry Potter, Dune, Sapiens..."
+          placeholder="Nhập tên sách, tác giả... (VD: Harry Potter, Dune, Sapiens)"
           clearable
-          :loading="loading"
-          class="rounded-lg"
+          density="comfortable"
+          variant="outlined"
+          hide-details
+          class="search-main-field flex-grow-1"
+          :loading="loading && !!query.trim()"
+          @keyup.enter="triggerSearch(1)"
         />
-      </v-col>
-    </v-row>
+        <v-btn
+          color="primary"
+          class="btn-pill btn-gradient-primary text-none px-5 d-none d-sm-flex"
+          prepend-icon="mdi-magnify"
+          :loading="loading"
+          @click="triggerSearch(1)"
+        >
+          Tìm kiếm
+        </v-btn>
+      </div>
 
-    <!-- Advanced Filters Panel -->
-    <v-row justify="center" class="mt-n4 mb-1">
-      <v-col cols="12" md="9" lg="8">
-        <v-expansion-panels v-model="showFilters" variant="accordion" flat>
-          <v-expansion-panel
-            value="filters"
-            elevation="0"
-            rounded="lg"
-            class="filter-panel"
-          >
-            <v-expansion-panel-title class="filter-panel-title py-2">
-              <div class="d-flex align-center gap-2">
-                <v-icon icon="mdi-filter-variant" size="small" color="primary" />
-                <span class="text-body-2 font-weight-medium">Bộ lọc nâng cao</span>
-                <v-badge
-                  v-if="activeFilterCount > 0"
-                  :content="activeFilterCount"
-                  color="primary"
-                  inline
-                />
-              </div>
-            </v-expansion-panel-title>
-
-            <v-expansion-panel-text>
-              <v-row dense class="mt-1">
-
-                <!-- Author filter -->
-                <v-col cols="12" sm="6" md="6">
-                  <v-text-field
-                    v-model="filterAuthor"
-                    label="Tác giả"
-                    prepend-inner-icon="mdi-account-edit"
-                    density="compact"
-                    variant="outlined"
-                    clearable
-                    hide-details
-                    class="filter-field"
-                  />
-                </v-col>
-
-                <!-- Subject filter -->
-                <v-col cols="12" sm="6" md="6">
-                  <v-text-field
-                    v-model="filterSubject"
-                    label="Chủ đề"
-                    prepend-inner-icon="mdi-tag-outline"
-                    density="compact"
-                    variant="outlined"
-                    clearable
-                    hide-details
-                    class="filter-field"
-                  />
-                </v-col>
-
-                <!-- Language select -->
-                <v-col cols="12" sm="6" md="4">
-                  <v-select
-                    v-model="filterLanguage"
-                    :items="languageOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="Ngôn ngữ"
-                    prepend-inner-icon="mdi-translate"
-                    density="compact"
-                    variant="outlined"
-                    clearable
-                    hide-details
-                    class="filter-field"
-                  />
-                </v-col>
-
-                <!-- Year range -->
-                <v-col cols="6" sm="3" md="2">
-                  <v-text-field
-                    v-model="filterYearStart"
-                    label="Năm từ"
-                    prepend-inner-icon="mdi-calendar-start"
-                    density="compact"
-                    variant="outlined"
-                    type="number"
-                    hide-details
-                    class="filter-field"
-                    placeholder="VD: 1990"
-                  />
-                </v-col>
-                <v-col cols="6" sm="3" md="2">
-                  <v-text-field
-                    v-model="filterYearEnd"
-                    label="Năm đến"
-                    prepend-inner-icon="mdi-calendar-end"
-                    density="compact"
-                    variant="outlined"
-                    type="number"
-                    hide-details
-                    class="filter-field"
-                    placeholder="VD: 2024"
-                  />
-                </v-col>
-
-                <!-- Sort select -->
-                <v-col cols="12" sm="6" md="4">
-                  <v-select
-                    v-model="filterSort"
-                    :items="sortOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="Sắp xếp theo"
-                    prepend-inner-icon="mdi-sort"
-                    density="compact"
-                    variant="outlined"
-                    clearable
-                    hide-details
-                    class="filter-field"
-                  />
-                </v-col>
-              </v-row>
-
-              <!-- Filter Actions -->
-              <v-row dense class="mt-3 mb-1">
-                <v-col cols="12" class="d-flex justify-end gap-2">
-                  <v-btn
-                    variant="text"
-                    size="small"
-                    color="grey"
-                    prepend-icon="mdi-close-circle-outline"
-                    :disabled="!hasActiveFilters"
-                    @click="clearAllFilters(true)"
-                    class="text-none"
-                  >
-                    Xóa bộ lọc
-                  </v-btn>
-                  <v-btn
-                    variant="flat"
-                    size="small"
-                    color="primary"
-                    prepend-icon="mdi-magnify"
-                    @click="applyFilters"
-                    class="text-none"
-                  >
-                    Áp dụng lọc
-                  </v-btn>
-                </v-col>
-              </v-row>
-
-              <!-- Active Filter Chips -->
-              <div v-if="hasActiveFilters" class="d-flex flex-wrap gap-1 mt-1 mb-1">
-                <v-chip
-                  v-if="filterAuthor"
-                  closable
-                  size="x-small"
-                  color="teal"
-                  variant="flat"
-                  @click:close="filterAuthor = ''; applyFilters()"
-                >
-                  Tác giả: {{ filterAuthor }}
-                </v-chip>
-                <v-chip
-                  v-if="filterSubject"
-                  closable
-                  size="x-small"
-                  color="deep-purple"
-                  variant="flat"
-                  @click:close="filterSubject = ''; applyFilters()"
-                >
-                  Chủ đề: {{ filterSubject }}
-                </v-chip>
-                <v-chip
-                  v-if="filterLanguage"
-                  closable
-                  size="x-small"
-                  color="blue"
-                  variant="flat"
-                  @click:close="filterLanguage = ''; applyFilters()"
-                >
-                  Ngôn ngữ: {{ languageOptions.find(l => l.value === filterLanguage)?.title || filterLanguage }}
-                </v-chip>
-                <v-chip
-                  v-if="filterYearStart || filterYearEnd"
-                  closable
-                  size="x-small"
-                  color="orange"
-                  variant="flat"
-                  @click:close="filterYearStart = ''; filterYearEnd = ''; applyFilters()"
-                >
-                  Năm: {{ filterYearStart || '*' }} – {{ filterYearEnd || '*' }}
-                </v-chip>
-                <v-chip
-                  v-if="filterSort"
-                  closable
-                  size="x-small"
-                  color="pink"
-                  variant="flat"
-                  @click:close="filterSort = ''; applyFilters()"
-                >
-                  Sắp xếp: {{ sortOptions.find(s => s.value === filterSort)?.title || filterSort }}
-                </v-chip>
-              </div>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-        </v-expansion-panels>
-      </v-col>
-    </v-row>
-
-    <!-- Subjects Keywords Section -->
-    <v-row justify="center" class="mt-n2 mb-3">
-      <v-col cols="12" md="10" lg="9">
-        <div class="d-flex align-center flex-wrap gap-2">
-          <div class="d-flex align-center text-caption font-weight-bold text-grey-darken-2 me-2 py-1">
-            <v-icon icon="mdi-tag-multiple-outline" size="small" class="me-1 text-primary" />
-            Chủ đề sách:
-          </div>
-
-          <v-chip-group
-            v-model="selectedSubject"
-            selected-class="text-white"
-            mandatory
-          >
-            <v-chip
-              v-for="sub in subjects"
-              :key="sub.key"
-              :value="sub.key"
-              :color="selectedSubject === sub.key ? 'primary' : undefined"
-              :variant="selectedSubject === sub.key && !hasSearched ? 'flat' : 'outlined'"
-              size="small"
-              class="ma-1 font-weight-medium"
-              filter
-              :prepend-icon="sub.icon"
-              @click="onSelectSubject(sub.key)"
-            >
-              {{ sub.name }}
-            </v-chip>
-          </v-chip-group>
-        </div>
-      </v-col>
-    </v-row>
-
-    <!-- Results Header: Count & Grid/List Toggle Button -->
-    <v-row justify="center" align="center" class="mb-3">
-      <v-col cols="12" md="10" lg="10" class="d-flex flex-wrap align-center justify-space-between gap-2">
-        <div class="text-body-2 text-grey-darken-2 d-flex align-center">
-          <template v-if="loading">
-            <v-progress-circular indeterminate size="16" width="2" color="primary" class="me-2" />
-            <span>Đang tải danh sách sách...</span>
-          </template>
-          <template v-else-if="error">
-            <span class="text-error font-weight-medium">{{ error }}</span>
-          </template>
-          <template v-else-if="hasSearched">
-            <span>
-              Kết quả tìm kiếm
-              <template v-if="query.trim()">cho <strong class="text-grey-darken-4">"{{ query }}"</strong></template>
-              <template v-if="hasActiveFilters">
-                <v-icon icon="mdi-filter" size="x-small" class="mx-1" />
-                <span class="text-caption">(có bộ lọc)</span>
-              </template>
-              :
-              <strong class="text-primary">{{ total }}</strong> cuốn (trang {{ page }}/{{ totalPages }})
-            </span>
-          </template>
-          <template v-else>
-            <span class="d-flex align-center">
-              <v-icon :icon="activeSubjectObj.icon" size="small" color="primary" class="me-1" />
-              Sách theo chủ đề <strong class="text-primary mx-1">{{ activeSubjectObj.name }}</strong>:
-              <span>{{ total }} cuốn (trang {{ page }}/{{ totalPages }})</span>
-            </span>
-          </template>
-        </div>
-
-        <!-- Grid / List Switcher Button -->
-        <div class="d-flex align-center">
-          <v-btn-toggle
-            v-model="viewMode"
-            mandatory
-            density="compact"
-            variant="outlined"
-            divided
+      <!-- Advanced Filter Accordion Trigger -->
+      <div class="mt-3 d-flex align-center justify-space-between">
+        <button
+          type="button"
+          class="btn-toggle-filter d-flex align-center gap-1"
+          @click="showFilters = !showFilters"
+        >
+          <v-icon
+            :icon="showFilters ? 'mdi-chevron-up' : 'mdi-filter-variant'"
+            size="16"
             color="primary"
-            rounded="lg"
-          >
-            <v-btn value="grid" size="small" prepend-icon="mdi-view-grid" class="text-none">
-              Lưới
+          />
+          <span>{{ showFilters ? 'Thu gọn bộ lọc nâng cao' : 'Bộ lọc nâng cao' }}</span>
+          <span v-if="activeFilterCount > 0" class="filter-count-badge">
+            {{ activeFilterCount }}
+          </span>
+        </button>
+
+        <span v-if="hasActiveFilters" class="text-caption text-primary font-weight-medium cursor-pointer" @click="clearAllFilters(true)">
+          Xóa tất cả bộ lọc
+        </span>
+      </div>
+
+      <!-- Advanced Filters Expanded Content -->
+      <v-expand-transition>
+        <div v-if="showFilters" class="filter-expand-area mt-3 pt-3 border-t">
+          <v-row dense>
+            <!-- Author -->
+            <v-col cols="12" sm="6" md="4">
+              <v-text-field
+                v-model="filterAuthor"
+                label="Tác giả"
+                prepend-inner-icon="mdi-account-edit"
+                density="compact"
+                variant="outlined"
+                clearable
+                hide-details
+                class="rounded-lg"
+              />
+            </v-col>
+
+            <!-- Subject -->
+            <v-col cols="12" sm="6" md="4">
+              <v-text-field
+                v-model="filterSubject"
+                label="Chủ đề từ khóa"
+                prepend-inner-icon="mdi-tag-outline"
+                density="compact"
+                variant="outlined"
+                clearable
+                hide-details
+                class="rounded-lg"
+              />
+            </v-col>
+
+            <!-- Language -->
+            <v-col cols="12" sm="6" md="4">
+              <v-select
+                v-model="filterLanguage"
+                :items="languageOptions"
+                item-title="title"
+                item-value="value"
+                label="Ngôn ngữ"
+                prepend-inner-icon="mdi-translate"
+                density="compact"
+                variant="outlined"
+                clearable
+                hide-details
+                class="rounded-lg"
+              />
+            </v-col>
+
+            <!-- Year Range -->
+            <v-col cols="6" sm="3" md="2">
+              <v-text-field
+                v-model="filterYearStart"
+                label="Năm từ"
+                prepend-inner-icon="mdi-calendar-start"
+                density="compact"
+                variant="outlined"
+                type="number"
+                hide-details
+                class="rounded-lg"
+                placeholder="1990"
+              />
+            </v-col>
+            <v-col cols="6" sm="3" md="2">
+              <v-text-field
+                v-model="filterYearEnd"
+                label="Năm đến"
+                prepend-inner-icon="mdi-calendar-end"
+                density="compact"
+                variant="outlined"
+                type="number"
+                hide-details
+                class="rounded-lg"
+                placeholder="2024"
+              />
+            </v-col>
+
+            <!-- Sort By -->
+            <v-col cols="12" sm="6" md="4">
+              <v-select
+                v-model="filterSort"
+                :items="sortOptions"
+                item-title="title"
+                item-value="value"
+                label="Sắp xếp theo"
+                prepend-inner-icon="mdi-sort"
+                density="compact"
+                variant="outlined"
+                clearable
+                hide-details
+                class="rounded-lg"
+              />
+            </v-col>
+          </v-row>
+
+          <!-- Filter Action Buttons -->
+          <div class="d-flex align-center justify-end gap-2 mt-3">
+            <v-btn
+              variant="tonal"
+              color="grey-darken-1"
+              size="small"
+              class="btn-rounded text-none px-4"
+              prepend-icon="mdi-close-circle-outline"
+              :disabled="!hasActiveFilters"
+              @click="clearAllFilters(true)"
+            >
+              Đặt lại
             </v-btn>
-            <v-btn value="list" size="small" prepend-icon="mdi-view-list" class="text-none">
-              Danh sách
+            <v-btn
+              color="primary"
+              size="small"
+              class="btn-rounded btn-gradient-primary text-none px-5"
+              prepend-icon="mdi-check"
+              @click="applyFilters"
+            >
+              Áp dụng lọc
             </v-btn>
-          </v-btn-toggle>
+          </div>
         </div>
-      </v-col>
-    </v-row>
+      </v-expand-transition>
+    </div>
+
+    <!-- Subject Category Pills -->
+    <div class="subjects-bar p-2 mb-5 bg-white rounded-xl border">
+      <div class="d-flex align-center gap-1 overflow-x-auto py-1 filter-pills">
+        <div class="text-caption font-weight-bold text-slate-500 ps-2 pe-1 d-none d-md-flex align-center">
+          <v-icon icon="mdi-tag-multiple-outline" size="16" class="me-1 text-primary" />
+          Chủ đề:
+        </div>
+
+        <button
+          v-for="sub in subjects"
+          :key="sub.key"
+          type="button"
+          class="subject-pill-btn"
+          :class="{ active: selectedSubject === sub.key && !hasSearched }"
+          @click="onSelectSubject(sub.key)"
+        >
+          <v-icon :icon="sub.icon" size="15" class="me-1" />
+          <span>{{ sub.name }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Header: Count & Grid/List Switcher -->
+    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-4 px-1">
+      <div class="text-body-2 text-slate-700 d-flex align-center">
+        <template v-if="loading">
+          <v-progress-circular indeterminate size="18" width="2" color="primary" class="me-2" />
+          <span>Đang tìm kiếm sách...</span>
+        </template>
+        <template v-else-if="error">
+          <span class="text-error font-weight-medium">{{ error }}</span>
+        </template>
+        <template v-else-if="hasSearched">
+          <span>
+            Kết quả tìm kiếm
+            <template v-if="query.trim()">cho <strong class="text-slate-900">"{{ query }}"</strong></template>
+            <template v-if="hasActiveFilters">
+              <span class="text-caption text-primary ms-1">(đã lọc)</span>
+            </template>
+            :
+            <strong class="text-primary">{{ total }}</strong> cuốn (trang {{ page }}/{{ totalPages }})
+          </span>
+        </template>
+        <template v-else>
+          <span class="d-flex align-center">
+            <v-icon :icon="activeSubjectObj.icon" size="18" color="primary" class="me-1" />
+            Chủ đề <strong class="text-primary mx-1">{{ activeSubjectObj.name }}</strong>:
+            <span class="ms-1">{{ total }} cuốn (trang {{ page }}/{{ totalPages }})</span>
+          </span>
+        </template>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="view-switcher-wrapper d-flex align-center p-1 bg-white border rounded-pill">
+        <button
+          type="button"
+          class="view-pill-btn"
+          :class="{ active: viewMode === 'grid' }"
+          title="Xem dạng lưới"
+          @click="viewMode = 'grid'"
+        >
+          <v-icon icon="mdi-view-grid-outline" size="16" class="me-1" />
+          <span>Lưới</span>
+        </button>
+        <button
+          type="button"
+          class="view-pill-btn"
+          :class="{ active: viewMode === 'list' }"
+          title="Xem dạng danh sách"
+          @click="viewMode = 'list'"
+        >
+          <v-icon icon="mdi-view-list-outline" size="16" class="me-1" />
+          <span>Danh sách</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Loading State -->
-    <v-row v-if="loading" justify="center" class="mt-8 mb-12">
-      <v-col cols="12" class="text-center">
-        <v-progress-circular indeterminate size="52" color="primary" />
-        <p class="text-body-2 text-grey-darken-1 mt-3">Đang tải dữ liệu từ Open Library...</p>
-      </v-col>
-    </v-row>
+    <div v-if="loading && books.length === 0" class="text-center py-16">
+      <v-progress-circular indeterminate size="52" width="4" color="primary" />
+      <p class="text-body-2 text-slate-500 font-weight-medium mt-4">
+        Đang tải dữ liệu từ Open Library...
+      </p>
+    </div>
 
+    <!-- Error State -->
+    <div v-else-if="error" class="text-center py-12 px-4">
+      <div class="mx-auto rounded-xl pa-6 border bg-white shadow-sm" style="max-width: 480px;">
+        <v-avatar color="red-lighten-5" size="56" class="mb-3">
+          <v-icon icon="mdi-alert-circle-outline" color="error" size="32" />
+        </v-avatar>
+        <h3 class="text-h6 font-weight-bold mb-2">Đã xảy ra sự cố</h3>
+        <p class="text-body-2 text-slate-500 mb-4">{{ error }}</p>
+        <v-btn
+          color="primary"
+          class="btn-pill btn-gradient-primary px-6"
+          prepend-icon="mdi-refresh"
+          @click="retry"
+        >
+          Thử lại
+        </v-btn>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="books.length === 0" class="text-center py-16 px-4">
+      <div class="empty-state-card mx-auto pa-8 rounded-xl border bg-white" style="max-width: 500px;">
+        <div class="empty-icon-ring mx-auto mb-4">
+          <v-icon size="44" color="primary">mdi-book-search-outline</v-icon>
+        </div>
+        <h3 class="text-h6 font-weight-bold text-slate-800 mb-2">
+          Không tìm thấy cuốn sách nào
+        </h3>
+        <p class="text-body-2 text-slate-500 mb-5">
+          Hãy thử đổi từ khóa tìm kiếm, kiểm tra lỗi chính tả hoặc chọn một trong các chủ đề đề xuất phía trên.
+        </p>
+        <v-btn
+          v-if="hasSearched"
+          variant="tonal"
+          color="primary"
+          class="btn-pill text-none px-5"
+          prepend-icon="mdi-refresh"
+          @click="onSelectSubject('love')"
+        >
+          Quay lại chủ đề gợi ý
+        </v-btn>
+      </div>
+    </div>
+
+    <!-- Content State: Books Grid vs List -->
     <template v-else>
-      <!-- Error State -->
-      <v-row v-if="error" justify="center" class="mt-6 mb-8">
-        <v-col cols="12" md="8" class="text-center">
-          <v-alert type="error" variant="tonal" class="mb-4 text-start">
-            {{ error }}
-          </v-alert>
-          <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" @click="retry">
-            Thử lại
-          </v-btn>
-        </v-col>
-      </v-row>
-
-      <!-- Empty State -->
-      <v-row v-else-if="books.length === 0" justify="center" class="mt-10 mb-12">
-        <v-col cols="12" md="6" class="text-center">
-          <v-icon size="80" color="grey-lighten-1">mdi-book-search-outline</v-icon>
-          <p class="text-h6 text-grey mt-3">Không tìm thấy cuốn sách nào</p>
-          <p class="text-body-2 text-grey-lighten-1">Hãy thử chọn chủ đề khác hoặc thay đổi từ khóa tìm kiếm</p>
-        </v-col>
-      </v-row>
-
-      <!-- Content State: Grid View vs List View -->
-      <template v-else>
-        <!-- Dạng Lưới (Grid) -->
-        <v-row v-if="viewMode === 'grid'" class="mt-1">
-          <v-col
-            v-for="book in books"
-            :key="book.openLibraryId"
-            cols="6"
-            sm="4"
-            md="3"
-            lg="2"
-          >
-            <BookCard
-              :book="book"
-              :in-library="isInLibrary(book.openLibraryId)"
-              :busy="addingIds.has(book.openLibraryId)"
-              @add="handleAdd"
-              @detail="handleDetail"
-            />
-          </v-col>
-        </v-row>
-
-        <!-- Dạng Danh sách (List) -->
-        <v-row v-else class="mt-1" justify="center">
-          <v-col cols="12" md="10" lg="10">
-            <BookListItem
-              v-for="book in books"
-              :key="book.openLibraryId"
-              :book="book"
-              :in-library="isInLibrary(book.openLibraryId)"
-              :busy="addingIds.has(book.openLibraryId)"
-              @add="handleAdd"
-              @detail="handleDetail"
-            />
-          </v-col>
-        </v-row>
-      </template>
-
-      <!-- Pagination -->
-      <v-row v-if="!loading && !error && books.length > 0 && totalPages > 1" justify="center" class="mt-6 mb-4">
-        <v-col cols="auto">
-          <v-pagination
-            v-model="page"
-            :length="totalPages"
-            :total-visible="7"
-            @update:model-value="onPageChange"
+      <!-- Grid View -->
+      <v-row v-if="viewMode === 'grid'" dense>
+        <v-col
+          v-for="book in books"
+          :key="book.openLibraryId"
+          cols="6"
+          sm="4"
+          md="3"
+          lg="2"
+          class="d-flex mb-2"
+        >
+          <BookCard
+            :book="book"
+            :in-library="isInLibrary(book.openLibraryId)"
+            :busy="addingIds.has(book.openLibraryId)"
+            class="w-100"
+            @add="handleAdd"
+            @detail="handleDetail"
           />
         </v-col>
       </v-row>
+
+      <!-- List View -->
+      <div v-else class="list-view-wrapper">
+        <BookListItem
+          v-for="book in books"
+          :key="book.openLibraryId"
+          :book="book"
+          :in-library="isInLibrary(book.openLibraryId)"
+          :busy="addingIds.has(book.openLibraryId)"
+          @add="handleAdd"
+          @detail="handleDetail"
+        />
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="d-flex justify-center mt-6 mb-8">
+        <v-pagination
+          v-model="page"
+          :length="totalPages"
+          :total-visible="7"
+          rounded="circle"
+          color="primary"
+          class="custom-pagination"
+          @update:model-value="onPageChange"
+        />
+      </div>
     </template>
 
-    <!-- Feedback Toast -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" location="bottom center" timeout="3000">
-      {{ snackbar.text }}
+    <!-- Feedback Snackbar -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      location="bottom center"
+      timeout="3000"
+      class="rounded-lg"
+    >
+      <div class="d-flex align-center gap-2">
+        <v-icon
+          :icon="snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+          size="20"
+        />
+        <span class="font-weight-medium">{{ snackbar.text }}</span>
+      </div>
       <template v-slot:actions>
-        <v-btn icon="mdi-close" variant="text" @click="snackbar.show = false" />
+        <v-btn icon="mdi-close" size="small" variant="text" @click="snackbar.show = false" />
       </template>
     </v-snackbar>
 
@@ -641,24 +646,142 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.filter-panel {
-  background: rgba(var(--v-theme-surface), 0.95) !important;
-  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+.page-title {
+  color: #0f172a;
+  letter-spacing: -0.025em;
 }
 
-.filter-panel-title {
-  min-height: 40px !important;
+.hero-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.filter-field :deep(.v-field) {
-  font-size: 0.875rem;
+.search-box-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.gap-1 {
-  gap: 4px;
+.search-main-field :deep(.v-field) {
+  border-radius: 9999px !important;
+  background-color: #f8fafc;
 }
 
-.gap-2 {
-  gap: 8px;
+.btn-toggle-filter {
+  background: transparent;
+  border: none;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
+.btn-toggle-filter:hover {
+  background-color: #eff6ff;
+}
+
+.filter-count-badge {
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.filter-expand-area {
+  border-color: #f1f5f9 !important;
+}
+
+/* Subject Pills */
+.subjects-bar {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-pills {
+  scrollbar-width: none;
+}
+.filter-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.subject-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.subject-pill-btn:hover {
+  color: #1e293b;
+  background-color: #f1f5f9;
+}
+
+.subject-pill-btn.active {
+  background-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* View Switcher */
+.view-switcher-wrapper {
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.view-pill-btn:hover {
+  color: #1e293b;
+}
+
+.view-pill-btn.active {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* Empty state */
+.empty-state-card {
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06);
+}
+
+.empty-icon-ring {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #eff6ff;
+  border: 7px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
 </style>

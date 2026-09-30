@@ -15,48 +15,71 @@ const emit = defineEmits<{
 <template>
   <v-dialog
     :model-value="modelValue"
-    max-width="450"
+    max-width="440"
     persistent
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <v-card class="rounded-lg pa-2">
-      <v-card-item>
-        <template v-slot:prepend>
-          <v-avatar color="error-lighten-4" size="44">
-            <v-icon icon="mdi-alert-outline" color="error" size="26" />
-          </v-avatar>
-        </template>
-        <v-card-title class="text-h6 font-weight-bold">
-          {{ title }}
-        </v-card-title>
-      </v-card-item>
+    <div class="confirm-dialog-card bg-white rounded-xl pa-5 border shadow-lg">
+      <div class="d-flex align-center gap-3 mb-3">
+        <div class="danger-icon-wrapper flex-shrink-0">
+          <v-icon icon="mdi-trash-can-alert-outline" color="error" size="24" />
+        </div>
+        <div>
+          <h3 class="text-subtitle-1 font-weight-bold text-slate-900 mb-0">
+            {{ title }}
+          </h3>
+          <span class="text-caption text-slate-500">Xác nhận thao tác xóa</span>
+        </div>
+      </div>
 
-      <v-card-text class="pt-2 text-body-1 text-grey-darken-2">
+      <div class="dialog-content text-body-2 text-slate-600 mb-5">
         Bạn có chắc chắn muốn xóa cuốn sách
-        <strong v-if="bookTitle" class="text-grey-darken-4">"{{ bookTitle }}"</strong>
-        khỏi tủ sách không? Hành động này không thể hoàn tác.
-      </v-card-text>
+        <strong v-if="bookTitle" class="text-slate-900">"{{ bookTitle }}"</strong>
+        khỏi tủ sách cá nhân? Mọi tiến độ đọc và ghi chú liên quan sẽ bị xóa bỏ.
+      </div>
 
-      <v-card-actions class="px-4 pb-3 pt-2">
-        <v-spacer />
+      <div class="d-flex align-center justify-end gap-2">
         <v-btn
-          variant="text"
+          variant="tonal"
           color="grey-darken-1"
+          class="btn-rounded text-none px-4"
           :disabled="loading"
           @click="emit('update:modelValue', false)"
         >
-          Hủy
+          Hủy bỏ
         </v-btn>
+
         <v-btn
           color="error"
           variant="flat"
-          prepend-icon="mdi-delete"
+          class="btn-rounded btn-gradient-danger text-none px-4"
+          prepend-icon="mdi-trash-can-outline"
           :loading="loading"
           @click="emit('confirm')"
         >
-          Xóa khỏi tủ
+          Xác nhận xóa
         </v-btn>
-      </v-card-actions>
-    </v-card>
+      </div>
+    </div>
   </v-dialog>
 </template>
+
+<style scoped>
+.confirm-dialog-card {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.danger-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+</style>

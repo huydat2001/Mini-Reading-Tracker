@@ -24,9 +24,17 @@ const emit = defineEmits<{
 
 const statusOptions: Array<{ title: string; value: ReadingStatus; color: string; icon: string }> = [
   { title: 'Muốn đọc', value: 'want_to_read', color: 'blue-grey', icon: 'mdi-bookmark-outline' },
-  { title: 'Đang đọc', value: 'reading', color: 'amber-darken-2', icon: 'mdi-book-open-page-variant' },
-  { title: 'Đã đọc', value: 'read', color: 'success', icon: 'mdi-check-circle-outline' },
+  { title: 'Đang đọc', value: 'reading', color: 'amber-darken-3', icon: 'mdi-book-open-page-variant' },
+  { title: 'Đã đọc', value: 'read', color: 'success', icon: 'mdi-check-decagram' },
 ]
+
+const ratingLabels: Record<number, string> = {
+  1: 'Không thích',
+  2: 'Bình thường',
+  3: 'Khá hay',
+  4: 'Rất hay',
+  5: 'Tuyệt phẩm',
+}
 
 const currentStatus = ref<ReadingStatus>(props.entry.status)
 const pagesInput = ref<number>(props.entry.pagesRead)
@@ -60,6 +68,10 @@ const progressPercent = computed(() => {
   return Math.min(100, Math.max(0, pct))
 })
 
+const isCompleted = computed(() => {
+  return props.entry.status === 'read' || (hasTotalPages.value && totalPages.value !== null && props.entry.pagesRead >= totalPages.value)
+})
+
 const cover = computed(
   () =>
     props.entry.book.coverUrl ||
@@ -81,7 +93,7 @@ function onStatusChange(newStatus: ReadingStatus) {
 }
 
 function onPagesBlurOrEnter() {
-  if (!hasTotalPages.value) return // Shouldn't happen due to disabled state, but guard
+  if (!hasTotalPages.value) return
 
   let val = Number(pagesInput.value)
   if (isNaN(val) || val < 0) {
@@ -94,6 +106,20 @@ function onPagesBlurOrEnter() {
   if (val !== props.entry.pagesRead) {
     emit('update', props.entry.id, { pagesRead: val })
   }
+}
+
+function addPages(step: number) {
+  if (!hasTotalPages.value || !totalPages.value) return
+  const current = Number(pagesInput.value) || 0
+  const nextVal = Math.min(totalPages.value, current + step)
+  pagesInput.value = nextVal
+  emit('update', props.entry.id, { pagesRead: nextVal })
+}
+
+function markCompleted() {
+  if (!hasTotalPages.value || !totalPages.value) return
+  pagesInput.value = totalPages.value
+  emit('update', props.entry.id, { pagesRead: totalPages.value, status: 'read' })
 }
 
 function saveTotalPages() {
@@ -125,51 +151,75 @@ function cancelNotes() {
 </script>
 
 <template>
-  <v-card elevation="2" class="rounded-lg h-100 d-flex flex-column transition-swing">
-    <v-card-text class="pa-4 flex-grow-1">
-      <v-row no-gutters>
-        <!-- Book Cover -->
-        <v-col cols="4" sm="3" class="pe-3">
-          <v-card elevation="2" class="rounded overflow-hidden">
-            <v-img :src="cover" height="150" cover>
+  <div class="book-card-wrapper card-hover-lift rounded-xl d-flex flex-column h-100 bg-white">
+    <!-- Main Card Body -->
+    <div class="pa-4 flex-grow-1">
+      <div class="d-flex gap-3">
+        <!-- Cover Art with Badge -->
+        <div class="cover-column">
+          <div class="book-cover-container">
+            <v-img
+              :src="cover"
+              height="160"
+              cover
+              class="book-cover rounded-lg"
+            >
               <template v-slot:error>
-                <v-img src="https://via.placeholder.com/200x300?text=No+Cover" height="150" cover />
+                <div class="cover-placeholder d-flex align-center justify-center h-100">
+                  <v-icon icon="mdi-book-outline" size="36" color="grey-lighten-1" />
+                </div>
               </template>
             </v-img>
-          </v-card>
-        </v-col>
 
-        <!-- Book Main Info -->
-        <v-col cols="8" sm="9">
-          <div class="d-flex align-start justify-space-between">
-            <div class="pe-2">
-              <h3 class="text-subtitle-1 font-weight-bold text-truncate-2" :title="entry.book.title">
+            <!-- Progress chip overlay on cover -->
+            <div
+              v-if="hasTotalPages"
+              class="cover-badge"
+              :class="isCompleted ? 'badge-success' : 'badge-primary'"
+            >
+              {{ isCompleted ? '100%' : `${progressPercent}%` }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Book Meta & Status -->
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-start justify-space-between gap-1">
+            <div class="pe-1 min-w-0">
+              <h3
+                class="book-title text-subtitle-1 font-weight-bold mb-1"
+                :title="entry.book.title"
+              >
                 {{ entry.book.title }}
               </h3>
-              <div class="text-caption text-primary font-weight-medium text-truncate">
-                {{ entry.book.authorName || 'Không rõ tác giả' }}
+              <div class="d-flex align-center text-caption text-primary font-weight-semibold mb-1">
+                <v-icon icon="mdi-feather" size="14" class="me-1 flex-shrink-0" />
+                <span class="text-truncate">{{ entry.book.authorName || 'Không rõ tác giả' }}</span>
               </div>
-              <div class="text-caption text-grey">
-                <span v-if="entry.book.publishYear">Năm XB: {{ entry.book.publishYear }}</span>
-                <span v-if="entry.book.publishYear && totalPages"> • </span>
-                <span v-if="totalPages">{{ totalPages }} trang</span>
+              <div class="text-caption text-grey-darken-1 d-flex flex-wrap align-center gap-1">
+                <span v-if="entry.book.publishYear" class="info-pill">
+                  Năm {{ entry.book.publishYear }}
+                </span>
+                <span v-if="totalPages" class="info-pill">
+                  {{ totalPages }} trang
+                </span>
               </div>
             </div>
 
-            <!-- Delete action button -->
-            <v-btn
-              icon="mdi-delete-outline"
-              size="small"
-              variant="text"
-              color="grey"
+            <!-- Delete Button -->
+            <button
+              type="button"
+              class="btn-action-delete pa-1 d-flex align-center justify-center flex-shrink-0"
               title="Xóa khỏi tủ sách"
               :disabled="busy"
               @click="emit('delete', entry)"
-            />
+            >
+              <v-icon icon="mdi-trash-can-outline" size="20" />
+            </button>
           </div>
 
-          <!-- Status Selector -->
-          <div class="mt-2">
+          <!-- Status Dropdown -->
+          <div class="mt-3">
             <v-select
               v-model="currentStatus"
               :items="statusOptions"
@@ -178,44 +228,47 @@ function cancelNotes() {
               density="compact"
               variant="outlined"
               hide-details
+              class="status-select rounded-lg"
               :disabled="busy"
               @update:model-value="onStatusChange"
             >
               <template v-slot:selection="{ item }">
-                <div class="d-flex align-center">
-                  <v-icon :icon="item.raw.icon" size="small" :color="item.raw.color" class="me-1" />
+                <div class="d-flex align-center gap-1">
+                  <v-icon :icon="item.raw.icon" size="16" :color="item.raw.color" />
                   <span class="text-caption font-weight-bold">{{ item.raw.title }}</span>
                 </div>
               </template>
             </v-select>
           </div>
-        </v-col>
-      </v-row>
+        </div>
+      </div>
 
-      <v-divider class="my-3" />
+      <div class="divider-line my-3"></div>
 
-      <!-- Progress Section -->
-      <div class="my-2">
-        <!-- Case 1: totalPages is available → show progress bar -->
+      <!-- Reading Progress Section -->
+      <div class="progress-section mb-3">
         <template v-if="hasTotalPages">
           <div class="d-flex align-center justify-space-between text-caption mb-1">
-            <span class="font-weight-medium text-grey-darken-2">Tiến độ đọc:</span>
-            <span class="font-weight-bold text-primary">
+            <span class="font-weight-semibold text-slate-700 d-flex align-center gap-1">
+              <v-icon icon="mdi-bookmark-check-outline" size="15" color="primary" />
+              Tiến độ đọc:
+            </span>
+            <span class="font-weight-bold" :class="isCompleted ? 'text-success' : 'text-primary'">
               {{ entry.pagesRead }} / {{ totalPages }} trang
-              ({{ progressPercent }}%)
+              <span class="text-grey-darken-1 font-weight-normal">({{ progressPercent }}%)</span>
             </span>
           </div>
 
           <v-progress-linear
             :model-value="progressPercent"
-            height="8"
+            height="7"
             rounded
-            :color="entry.status === 'read' ? 'success' : 'primary'"
-            class="mb-2"
+            :color="isCompleted ? 'success' : 'primary'"
+            class="progress-bar mb-2"
           />
 
-          <!-- Input Pages Read -->
-          <div class="d-flex align-center gap-2 mt-2">
+          <!-- Quick Increment Buttons & Input -->
+          <div class="d-flex flex-wrap align-center gap-1 mt-2">
             <v-text-field
               v-model.number="pagesInput"
               type="number"
@@ -223,44 +276,85 @@ function cancelNotes() {
               variant="outlined"
               label="Trang đã đọc"
               hide-details
-              style="max-width: 140px;"
+              class="pages-input-field"
               :min="0"
               :max="totalPages || undefined"
               :disabled="busy"
               @blur="onPagesBlurOrEnter"
               @keyup.enter="onPagesBlurOrEnter"
             />
+
+            <!-- Save button -->
             <v-btn
               size="small"
-              variant="tonal"
-              color="primary"
-              class="text-none"
+              :color="pagesInput !== entry.pagesRead ? 'primary' : 'grey-lighten-2'"
+              :variant="pagesInput !== entry.pagesRead ? 'flat' : 'tonal'"
+              class="btn-rounded text-none px-3"
+              :class="{ 'btn-gradient-primary': pagesInput !== entry.pagesRead }"
               :disabled="busy || pagesInput === entry.pagesRead"
               @click="onPagesBlurOrEnter"
             >
+              <v-icon icon="mdi-check" size="16" class="me-1" />
               Lưu
             </v-btn>
-            <span v-if="totalPages && pagesInput >= totalPages" class="text-caption text-success d-flex align-center">
-              <v-icon icon="mdi-check" size="small" class="me-1" /> Hoàn thành
-            </span>
+
+            <!-- Quick Step Buttons -->
+            <button
+              type="button"
+              class="btn-step"
+              title="Đọc thêm 5 trang"
+              :disabled="busy || isCompleted"
+              @click="addPages(5)"
+            >
+              +5
+            </button>
+            <button
+              type="button"
+              class="btn-step"
+              title="Đọc thêm 10 trang"
+              :disabled="busy || isCompleted"
+              @click="addPages(10)"
+            >
+              +10
+            </button>
+            <button
+              type="button"
+              class="btn-step"
+              title="Đọc thêm 25 trang"
+              :disabled="busy || isCompleted"
+              @click="addPages(25)"
+            >
+              +25
+            </button>
+
+            <!-- Mark Complete Shortcut -->
+            <button
+              v-if="!isCompleted"
+              type="button"
+              class="btn-step btn-step-complete"
+              title="Đánh dấu đã đọc xong cuốn sách này"
+              :disabled="busy"
+              @click="markCompleted"
+            >
+              <v-icon icon="mdi-check-all" size="13" class="me-1" />
+              Xong
+            </button>
           </div>
 
-          <!-- Allow editing totalPages even when already set -->
+          <!-- Edit Total Pages toggle -->
           <div class="mt-2">
             <template v-if="!isEditingTotalPages">
-              <v-btn
-                variant="text"
-                size="x-small"
-                color="grey"
-                prepend-icon="mdi-pencil-outline"
-                class="text-none"
+              <button
+                type="button"
+                class="btn-link-edit"
                 @click="isEditingTotalPages = true"
               >
-                Sửa tổng số trang ({{ totalPages }})
-              </v-btn>
+                <v-icon icon="mdi-pencil-ruler" size="13" class="me-1" />
+                Đổi tổng số trang ({{ totalPages }})
+              </button>
             </template>
             <template v-else>
-              <div class="d-flex align-center gap-2">
+              <div class="d-flex align-center gap-1 mt-1 p-2 bg-slate-50 rounded-lg">
                 <v-text-field
                   v-model.number="totalPagesInput"
                   type="number"
@@ -268,15 +362,15 @@ function cancelNotes() {
                   variant="outlined"
                   label="Tổng số trang"
                   hide-details
-                  style="max-width: 140px;"
+                  style="max-width: 130px;"
                   :min="1"
                   @keyup.enter="saveTotalPages"
                 />
                 <v-btn
                   size="small"
-                  variant="tonal"
+                  variant="flat"
                   color="primary"
-                  class="text-none"
+                  class="btn-rounded btn-gradient-primary text-none px-3"
                   :disabled="busy || !totalPagesInput || totalPagesInput <= 0"
                   @click="saveTotalPages"
                 >
@@ -284,9 +378,9 @@ function cancelNotes() {
                 </v-btn>
                 <v-btn
                   size="small"
-                  variant="text"
-                  color="grey"
-                  class="text-none"
+                  variant="tonal"
+                  color="grey-darken-1"
+                  class="btn-rounded text-none px-2"
                   @click="cancelTotalPagesEdit"
                 >
                   Hủy
@@ -296,136 +390,342 @@ function cancelNotes() {
           </div>
         </template>
 
-        <!-- Case 2: totalPages is null → show text only + prompt to add -->
+        <!-- Missing Total Pages Alert -->
         <template v-else>
-          <div class="d-flex align-center justify-space-between text-caption mb-1">
-            <span class="font-weight-medium text-grey-darken-2">Tiến độ đọc:</span>
-            <span class="font-weight-bold text-grey">
-              Đã đọc: {{ entry.pagesRead }} trang
-            </span>
-          </div>
-
-          <!-- Alert to add totalPages -->
-          <v-alert
-            type="info"
-            variant="tonal"
-            density="compact"
-            class="mb-2 text-caption"
-            icon="mdi-information-outline"
-          >
-            Sách chưa có thông tin tổng số trang. Hãy bổ sung để theo dõi tiến độ đọc.
-          </v-alert>
-
-          <!-- Input to add totalPages -->
-          <div class="d-flex align-center gap-2">
-            <v-text-field
-              v-model.number="totalPagesInput"
-              type="number"
-              density="compact"
-              variant="outlined"
-              label="Nhập tổng số trang"
-              placeholder="VD: 320"
-              hide-details
-              style="max-width: 180px;"
-              :min="1"
-              prepend-inner-icon="mdi-book-open-variant"
-              @keyup.enter="saveTotalPages"
-            />
-            <v-btn
-              size="small"
-              variant="flat"
-              color="primary"
-              class="text-none"
-              prepend-icon="mdi-check"
-              :disabled="busy || !totalPagesInput || totalPagesInput <= 0"
-              @click="saveTotalPages"
-            >
-              Bổ sung
-            </v-btn>
+          <div class="missing-pages-card pa-3 rounded-lg mb-2">
+            <div class="d-flex align-center gap-2 mb-2 text-amber-900">
+              <v-icon icon="mdi-alert-circle-outline" color="amber-darken-3" size="18" />
+              <span class="text-caption font-weight-bold">Chưa có thông tin tổng số trang</span>
+            </div>
+            <p class="text-caption text-slate-600 mb-2">
+              Bổ sung tổng số trang để kích hoạt thanh tiến độ và các nút tăng trang nhanh.
+            </p>
+            <div class="d-flex align-center gap-2">
+              <v-text-field
+                v-model.number="totalPagesInput"
+                type="number"
+                density="compact"
+                variant="outlined"
+                label="Tổng số trang"
+                placeholder="VD: 350"
+                hide-details
+                style="max-width: 140px;"
+                :min="1"
+                @keyup.enter="saveTotalPages"
+              />
+              <v-btn
+                size="small"
+                color="primary"
+                class="btn-rounded btn-gradient-primary text-none px-3"
+                prepend-icon="mdi-plus"
+                :disabled="busy || !totalPagesInput || totalPagesInput <= 0"
+                @click="saveTotalPages"
+              >
+                Bổ sung
+              </v-btn>
+            </div>
           </div>
         </template>
       </div>
 
-      <v-divider class="my-3" />
+      <div class="divider-line my-3"></div>
 
       <!-- Rating Section -->
       <div class="d-flex align-center justify-space-between mb-2">
-        <span class="text-caption font-weight-medium text-grey-darken-2">Đánh giá:</span>
-        <v-rating
-          v-model="currentRating"
-          color="amber-darken-2"
-          active-color="amber"
-          density="compact"
-          size="small"
-          clearable
-          hover
-          :disabled="busy"
-          @update:model-value="onRatingChange"
-        />
+        <span class="text-caption font-weight-semibold text-slate-700 d-flex align-center gap-1">
+          <v-icon icon="mdi-star-outline" size="15" color="amber-darken-2" />
+          Đánh giá:
+        </span>
+        <div class="d-flex align-center gap-2">
+          <v-rating
+            v-model="currentRating"
+            color="amber-darken-1"
+            active-color="amber-darken-2"
+            density="compact"
+            size="small"
+            clearable
+            hover
+            :disabled="busy"
+            @update:model-value="onRatingChange"
+          />
+          <span
+            v-if="currentRating"
+            class="rating-label text-caption font-weight-bold text-amber-darken-3"
+          >
+            {{ ratingLabels[currentRating] || `${currentRating} sao` }}
+          </span>
+        </div>
       </div>
 
-      <!-- Notes Section -->
-      <div class="mt-2">
+      <!-- Personal Notes Section -->
+      <div class="notes-container mt-2">
         <div class="d-flex align-center justify-space-between text-caption mb-1">
-          <span class="font-weight-medium text-grey-darken-2">Ghi chú cá nhân:</span>
-          <v-btn
+          <span class="font-weight-semibold text-slate-700 d-flex align-center gap-1">
+            <v-icon icon="mdi-note-text-outline" size="15" color="primary" />
+            Ghi chú cá nhân:
+          </span>
+          <button
             v-if="!isEditingNotes"
-            variant="text"
-            size="x-small"
-            color="primary"
-            prepend-icon="mdi-pencil-outline"
+            type="button"
+            class="btn-link-edit"
             @click="isEditingNotes = true"
           >
-            {{ entry.notes ? 'Sửa ghi chú' : 'Thêm ghi chú' }}
-          </v-btn>
+            <v-icon
+              :icon="entry.notes ? 'mdi-pencil-outline' : 'mdi-plus'"
+              size="13"
+              class="me-1"
+            />
+            {{ entry.notes ? 'Sửa' : 'Thêm ghi chú' }}
+          </button>
         </div>
 
+        <!-- Note Text View -->
         <div v-if="!isEditingNotes">
-          <p
+          <div
             v-if="entry.notes"
-            class="text-caption text-grey-darken-3 bg-grey-lighten-4 rounded pa-2 mb-0"
-            style="white-space: pre-wrap;"
+            class="note-box pa-2 rounded-lg text-caption"
           >
+            <v-icon icon="mdi-format-quote-open" size="14" color="primary" class="me-1 opacity-70" />
             {{ entry.notes }}
-          </p>
-          <p v-else class="text-caption text-grey-lighten-1 font-italic mb-0">
-            Chưa có ghi chú nào.
-          </p>
+          </div>
+          <div v-else class="text-caption text-grey-lighten-1 font-italic">
+            Chưa có ghi chú cảm nghĩ nào.
+          </div>
         </div>
 
-        <div v-else class="mt-1">
+        <!-- Note Textarea Edit -->
+        <div v-else class="mt-2">
           <v-textarea
             v-model="currentNotes"
             rows="2"
             auto-grow
             density="compact"
             variant="outlined"
-            placeholder="Viết cảm nghĩ, ghi chú của bạn về cuốn sách..."
+            placeholder="Viết cảm nghĩ, trích dẫn hay của bạn..."
             hide-details
-            class="mb-2"
+            class="note-textarea mb-2"
           />
           <div class="d-flex justify-end gap-2">
-            <v-btn size="x-small" variant="text" color="grey" @click="cancelNotes">
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="grey-darken-1"
+              class="btn-rounded text-none px-3"
+              @click="cancelNotes"
+            >
               Hủy
             </v-btn>
-            <v-btn size="x-small" color="primary" variant="flat" :disabled="busy" @click="saveNotes">
+            <v-btn
+              size="small"
+              color="primary"
+              variant="flat"
+              class="btn-rounded btn-gradient-primary text-none px-3"
+              prepend-icon="mdi-content-save-check-outline"
+              :disabled="busy"
+              @click="saveNotes"
+            >
               Lưu ghi chú
             </v-btn>
           </div>
         </div>
       </div>
-    </v-card-text>
+    </div>
 
-    <!-- Reading dates footer -->
-    <v-card-actions class="px-4 py-2 bg-grey-lighten-5 text-caption text-grey d-flex justify-space-between">
-      <span>
-        <v-icon icon="mdi-calendar-start-outline" size="x-small" class="me-1" />
-        {{ entry.startedAt ? `Bắt đầu: ${formatDate(entry.startedAt)}` : 'Chưa bắt đầu' }}
+    <!-- Reading Dates Footer -->
+    <div class="card-footer px-4 py-2 border-t d-flex align-center justify-space-between text-caption">
+      <span class="d-flex align-center text-slate-500">
+        <v-icon icon="mdi-calendar-start" size="14" class="me-1 text-slate-400" />
+        {{ entry.startedAt ? formatDate(entry.startedAt) : 'Chưa bắt đầu' }}
       </span>
-      <span v-if="entry.finishedAt">
-        <v-icon icon="mdi-calendar-check-outline" size="x-small" class="me-1 text-success" />
-        {{ `Xong: ${formatDate(entry.finishedAt)}` }}
+      <span v-if="entry.finishedAt" class="d-flex align-center text-emerald-600 font-weight-medium">
+        <v-icon icon="mdi-flag-checkered" size="14" class="me-1 text-emerald-500" />
+        {{ formatDate(entry.finishedAt) }}
       </span>
-    </v-card-actions>
-  </v-card>
+      <span v-else-if="entry.status === 'reading'" class="reading-badge-live">
+        <span class="pulse-dot"></span> Đang đọc
+      </span>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.book-card-wrapper {
+  position: relative;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cover-column {
+  width: 95px;
+  flex-shrink: 0;
+}
+
+.book-cover-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.book-cover {
+  transition: transform 0.25s ease;
+}
+
+.book-card-wrapper:hover .book-cover {
+  transform: scale(1.03);
+}
+
+.cover-placeholder {
+  background: #f1f5f9;
+}
+
+.cover-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+}
+
+.badge-primary {
+  background: rgba(37, 99, 235, 0.85);
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.9);
+}
+
+.book-title {
+  color: #0f172a;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.info-pill {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.divider-line {
+  height: 1px;
+  background-color: #f1f5f9;
+}
+
+.pages-input-field {
+  max-width: 120px;
+}
+.pages-input-field :deep(.v-field) {
+  border-radius: 8px !important;
+  font-size: 0.825rem;
+}
+
+.status-select :deep(.v-field) {
+  border-radius: 8px !important;
+  font-size: 0.825rem;
+}
+
+.btn-link-edit {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+.btn-link-edit:hover {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.btn-step-complete {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+.btn-step-complete:hover:not(:disabled) {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.missing-pages-card {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.note-box {
+  background-color: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  color: #334155;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.note-textarea :deep(.v-field) {
+  border-radius: 8px !important;
+  font-size: 0.825rem;
+}
+
+.card-footer {
+  background-color: #fafbfc;
+  border-color: #f1f5f9 !important;
+}
+
+.reading-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #d97706;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+.min-w-0 {
+  min-width: 0;
+}
+</style>

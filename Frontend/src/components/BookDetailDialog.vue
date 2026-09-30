@@ -114,197 +114,300 @@ function closeDialog() {
 <template>
   <v-dialog
     :model-value="modelValue"
-    max-width="760"
+    max-width="780"
     scrollable
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <v-card class="rounded-lg">
-      <v-toolbar color="primary" density="comfortable" class="text-white">
-        <v-toolbar-title class="text-subtitle-1 font-weight-bold">
-          Chi tiết tác phẩm
-        </v-toolbar-title>
-        <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="closeDialog" />
-      </v-toolbar>
-
-      <v-card-text class="pa-4 pa-md-6" style="max-height: 75vh;">
-        <!-- Loading state -->
-        <div v-if="loading" class="text-center py-12">
-          <v-progress-circular indeterminate size="52" color="primary" />
-          <p class="text-body-2 text-grey-darken-1 mt-4">Đang tải thông tin chi tiết từ Open Library...</p>
+    <div class="detail-dialog-card bg-white rounded-xl overflow-hidden border">
+      <!-- Header -->
+      <div class="dialog-header px-4 py-3 border-b d-flex align-center justify-space-between">
+        <div class="d-flex align-center gap-2">
+          <div class="dialog-header-badge">
+            <v-icon icon="mdi-book-open-page-variant" size="18" color="primary" />
+          </div>
+          <h2 class="text-subtitle-1 font-weight-bold text-slate-900 mb-0">
+            Thông tin chi tiết tác phẩm
+          </h2>
         </div>
+        <button
+          type="button"
+          class="btn-close-dialog pa-1 d-flex align-center justify-center rounded-circle"
+          @click="closeDialog"
+        >
+          <v-icon icon="mdi-close" size="20" />
+        </button>
+      </div>
 
-        <!-- Error state -->
-        <div v-else-if="error" class="text-center py-8">
-          <v-alert type="error" variant="tonal" class="mb-4 text-start">
-            {{ error }}
-          </v-alert>
-          <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" @click="loadData">
-            Thử lại
-          </v-btn>
-        </div>
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <v-progress-circular indeterminate size="48" color="primary" />
+        <div class="text-body-2 text-slate-500 mt-3 font-weight-medium">Đang tải dữ liệu từ Open Library...</div>
+      </div>
 
-        <!-- Empty state -->
-        <div v-else-if="!detail" class="text-center py-8 text-grey">
-          <v-icon size="64" color="grey-lighten-1">mdi-book-remove-outline</v-icon>
-          <p class="mt-2">Không tìm thấy thông tin tác phẩm này</p>
-        </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="text-center py-10 px-4">
+        <v-avatar color="red-lighten-5" size="52" class="mb-3">
+          <v-icon icon="mdi-alert-circle-outline" color="error" size="28" />
+        </v-avatar>
+        <p class="text-body-1 font-weight-bold mb-1">Không thể tải thông tin</p>
+        <p class="text-body-2 text-slate-500 mb-4">{{ error }}</p>
+        <v-btn
+          color="primary"
+          class="btn-rounded btn-gradient-primary text-none"
+          prepend-icon="mdi-refresh"
+          @click="loadData"
+        >
+          Thử lại
+        </v-btn>
+      </div>
 
-        <!-- Content state -->
-        <div v-else>
-          <v-row>
-            <!-- Cover image column -->
-            <v-col cols="12" sm="4" class="text-center">
-              <v-card elevation="3" class="mx-auto overflow-hidden rounded-lg" max-width="220">
-                <v-img
-                  :src="detail.coverUrl || 'https://via.placeholder.com/240x360?text=No+Cover'"
-                  height="300"
-                  cover
+      <!-- Detail Content -->
+      <div v-else-if="detail" class="dialog-body pa-4 pa-sm-6">
+        <v-row>
+          <!-- Left Cover Column -->
+          <v-col cols="12" sm="4" md="4" class="text-center text-sm-start">
+            <div class="cover-wrapper-detail mx-auto mx-sm-0">
+              <v-img
+                :src="detail.coverUrl || 'https://via.placeholder.com/220x330?text=No+Cover'"
+                height="270"
+                cover
+                class="rounded-xl shadow-md"
+              >
+                <template v-slot:error>
+                  <div class="d-flex align-center justify-center fill-height bg-slate-100 rounded-xl">
+                    <v-icon icon="mdi-book-outline" size="54" color="grey-lighten-1" />
+                  </div>
+                </template>
+              </v-img>
+            </div>
+          </v-col>
+
+          <!-- Right Info Column -->
+          <v-col cols="12" sm="8" md="8">
+            <h1 class="text-h6 text-md-h5 font-weight-bold text-slate-900 mb-2" style="line-height: 1.3;">
+              {{ detail.title }}
+            </h1>
+
+            <div class="d-flex align-center text-body-2 text-primary font-weight-semibold mb-3">
+              <v-icon icon="mdi-feather" size="16" class="me-1" />
+              <span>{{ detail.authorName || 'Không rõ tác giả' }}</span>
+            </div>
+
+            <!-- Meta Chips -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+              <span class="detail-pill">
+                <v-icon icon="mdi-calendar-blank-outline" size="14" class="me-1" />
+                {{ detail.publishYear ? `Xuất bản: ${detail.publishYear}` : 'Năm XB: Chưa rõ' }}
+              </span>
+
+              <span class="detail-pill">
+                <v-icon icon="mdi-book-open-page-variant-outline" size="14" class="me-1" />
+                {{ detail.totalPages ? `${detail.totalPages} trang` : 'Số trang: Chưa rõ' }}
+              </span>
+
+              <span class="detail-pill text-slate-500 font-mono">
+                <v-icon icon="mdi-identifier" size="14" class="me-1 text-primary" />
+                {{ detail.openLibraryId }}
+              </span>
+            </div>
+
+            <!-- Genres / Subjects -->
+            <div v-if="detail.subjects && detail.subjects.length > 0" class="mb-4">
+              <div class="text-caption font-weight-bold text-slate-700 mb-1">Chủ đề & Thể loại:</div>
+              <div class="d-flex flex-wrap gap-1">
+                <span
+                  v-for="(sub, idx) in detail.subjects.slice(0, 8)"
+                  :key="idx"
+                  class="genre-chip"
                 >
-                  <template v-slot:placeholder>
-                    <div class="d-flex align-center justify-center fill-height">
-                      <v-progress-circular indeterminate color="primary" />
+                  {{ sub }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+              <div class="text-caption font-weight-bold text-slate-700 mb-1">Tóm tắt tác phẩm:</div>
+              <div class="description-box pa-3 rounded-lg text-body-2 text-slate-700">
+                {{ detail.description || 'Chưa có tóm tắt mô tả cho tác phẩm này.' }}
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+
+        <div class="divider-line my-4"></div>
+
+        <!-- Add to library section -->
+        <div class="add-section-card pa-4 rounded-xl border">
+          <!-- In library state -->
+          <div v-if="isInLibrary(detail.openLibraryId)" class="d-flex flex-wrap align-center justify-space-between gap-3">
+            <div class="d-flex align-center text-emerald-600">
+              <v-icon icon="mdi-check-decagram" color="success" size="24" class="me-2" />
+              <div>
+                <div class="text-subtitle-2 font-weight-bold">Sách này đã có trong tủ sách của bạn</div>
+                <div class="text-caption text-slate-500">Bạn có thể theo dõi tiến độ đọc và ghi chú trong tủ sách.</div>
+              </div>
+            </div>
+            <v-btn
+              to="/library"
+              class="btn-rounded btn-gradient-success text-none px-4"
+              size="small"
+              prepend-icon="mdi-bookshelf"
+              @click="closeDialog"
+            >
+              Đến tủ sách
+            </v-btn>
+          </div>
+
+          <!-- Add to library form -->
+          <div v-else>
+            <div class="text-subtitle-2 font-weight-bold text-slate-800 mb-2 d-flex align-center gap-1">
+              <v-icon icon="mdi-plus-box-outline" size="18" color="primary" />
+              Thêm sách vào tủ cá nhân:
+            </div>
+            <v-row align="center" dense>
+              <v-col cols="12" sm="7">
+                <v-select
+                  v-model="selectedStatus"
+                  :items="statusOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Trạng thái đọc ban đầu"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  class="rounded-lg"
+                >
+                  <template v-slot:selection="{ item }">
+                    <div class="d-flex align-center gap-1">
+                      <v-icon :icon="item.raw.icon" size="16" color="primary" />
+                      <span class="text-caption font-weight-bold">{{ item.raw.title }}</span>
                     </div>
                   </template>
-                  <template v-slot:error>
-                    <v-img src="https://via.placeholder.com/240x360?text=No+Cover" height="300" cover />
-                  </template>
-                </v-img>
-              </v-card>
-            </v-col>
-
-            <!-- Book metadata column -->
-            <v-col cols="12" sm="8">
-              <h2 class="text-h5 font-weight-bold text-grey-darken-4 mb-2">
-                {{ detail.title }}
-              </h2>
-
-              <div class="text-subtitle-1 text-primary font-weight-medium mb-3">
-                <v-icon icon="mdi-account-edit" size="small" class="me-1" />
-                {{ detail.authorName || 'Không rõ tác giả' }}
-              </div>
-
-              <div class="d-flex flex-wrap gap-2 mb-4">
-                <v-chip size="small" variant="outlined" color="grey-darken-2" class="me-2 mb-1" prepend-icon="mdi-calendar-blank">
-                  {{ detail.publishYear ? `Xuất bản: ${detail.publishYear}` : 'Năm XB: Chưa rõ' }}
-                </v-chip>
-
-                <v-chip size="small" variant="outlined" color="grey-darken-2" class="me-2 mb-1" prepend-icon="mdi-book-open-page-variant">
-                  {{ detail.totalPages ? `${detail.totalPages} trang` : 'Số trang: Chưa rõ' }}
-                </v-chip>
-
-                <v-chip size="small" variant="outlined" color="primary" class="mb-1" prepend-icon="mdi-identifier">
-                  {{ detail.openLibraryId }}
-                </v-chip>
-              </div>
-
-              <!-- Subjects / Genres -->
-              <div v-if="detail.subjects && detail.subjects.length > 0" class="mb-4">
-                <div class="text-caption font-weight-bold text-grey-darken-2 mb-1">Chủ đề / Thể loại:</div>
-                <div class="d-flex flex-wrap">
-                  <v-chip
-                    v-for="(sub, idx) in detail.subjects.slice(0, 10)"
-                    :key="idx"
-                    size="x-small"
-                    variant="tonal"
-                    color="secondary"
-                    class="me-1 mb-1"
-                  >
-                    {{ sub }}
-                  </v-chip>
-                </div>
-              </div>
-
-              <!-- Description -->
-              <div class="mb-4">
-                <div class="text-caption font-weight-bold text-grey-darken-2 mb-1">Mô tả tác phẩm:</div>
-                <div
-                  class="text-body-2 text-grey-darken-3 rounded pa-3 bg-grey-lighten-4"
-                  style="max-height: 180px; overflow-y: auto; line-height: 1.6;"
+                </v-select>
+              </v-col>
+              <v-col cols="12" sm="5">
+                <v-btn
+                  color="primary"
+                  block
+                  class="btn-rounded btn-gradient-primary text-none"
+                  prepend-icon="mdi-plus"
+                  :loading="submitting"
+                  @click="handleAdd"
                 >
-                  {{ detail.description || 'Chưa có tóm tắt mô tả cho tác phẩm này.' }}
-                </div>
-              </div>
-            </v-col>
-          </v-row>
-
-          <v-divider class="my-4" />
-
-          <!-- Add to library section -->
-          <div class="rounded-lg pa-3 bg-grey-lighten-5 border">
-            <div v-if="isInLibrary(detail.openLibraryId)" class="d-flex align-center justify-space-between py-1">
-              <div class="d-flex align-center text-success">
-                <v-icon icon="mdi-check-circle" color="success" class="me-2" />
-                <span class="text-body-1 font-weight-medium">Sách này đã có trong tủ sách của bạn</span>
-              </div>
-              <v-btn
-                to="/library"
-                variant="outlined"
-                color="success"
-                size="small"
-                prepend-icon="mdi-bookshelf"
-                @click="closeDialog"
-              >
-                Xem trong tủ
-              </v-btn>
-            </div>
-
-            <div v-else>
-              <div class="text-subtitle-2 font-weight-bold mb-2">
-                Thêm sách vào tủ:
-              </div>
-              <v-row align="center">
-                <v-col cols="12" sm="7">
-                  <v-select
-                    v-model="selectedStatus"
-                    :items="statusOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="Trạng thái ban đầu"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                  >
-                    <template v-slot:item="{ props: itemProps, item }">
-                      <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" />
-                    </template>
-                  </v-select>
-                </v-col>
-                <v-col cols="12" sm="5">
-                  <v-btn
-                    color="primary"
-                    block
-                    prepend-icon="mdi-plus"
-                    :loading="submitting"
-                    @click="handleAdd"
-                  >
-                    Lưu vào tủ sách
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </div>
+                  Lưu vào tủ sách
+                </v-btn>
+              </v-col>
+            </v-row>
           </div>
         </div>
-      </v-card-text>
+      </div>
 
-      <v-card-actions class="pa-4 bg-grey-lighten-4">
-        <v-spacer />
-        <v-btn variant="text" color="grey-darken-1" @click="closeDialog">
+      <!-- Footer -->
+      <div class="dialog-footer px-4 py-3 bg-slate-50 border-t d-flex justify-end">
+        <v-btn
+          variant="tonal"
+          color="grey-darken-1"
+          class="btn-rounded text-none px-5"
+          @click="closeDialog"
+        >
           Đóng
         </v-btn>
-      </v-card-actions>
-    </v-card>
+      </div>
+    </div>
 
+    <!-- Toast feedback -->
     <v-snackbar
       v-model="feedback.show"
       :color="feedback.color"
       location="top center"
       timeout="3000"
     >
-      {{ feedback.text }}
+      <div class="d-flex align-center gap-2">
+        <v-icon :icon="feedback.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'" size="18" />
+        <span>{{ feedback.text }}</span>
+      </div>
       <template v-slot:actions>
-        <v-btn icon="mdi-close" variant="text" @click="feedback.show = false" />
+        <v-btn icon="mdi-close" size="small" variant="text" @click="feedback.show = false" />
       </template>
     </v-snackbar>
   </v-dialog>
 </template>
+
+<style scoped>
+.detail-dialog-card {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dialog-header-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-dialog {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-close-dialog:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.cover-wrapper-detail {
+  max-width: 220px;
+}
+
+.detail-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.genre-chip {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.description-box {
+  background-color: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  max-height: 160px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.divider-line {
+  height: 1px;
+  background-color: #f1f5f9;
+}
+
+.add-section-card {
+  background-color: #fafbfc;
+}
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.bg-slate-50 { background-color: #f8fafc; }
+.bg-slate-100 { background-color: #f1f5f9; }
+.font-mono { font-family: monospace; }
+</style>

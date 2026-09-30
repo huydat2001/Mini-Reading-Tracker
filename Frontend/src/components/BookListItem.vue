@@ -21,64 +21,66 @@ const cover = computed(
 </script>
 
 <template>
-  <v-card elevation="2" class="mb-3 rounded-lg overflow-hidden transition-swing">
-    <div class="d-flex flex-column flex-sm-row align-sm-center pa-3 gap-3">
+  <div class="search-list-item card-hover-lift rounded-xl bg-white border mb-3 pa-3 overflow-hidden">
+    <div class="d-flex flex-column flex-sm-row align-sm-center gap-3">
       <!-- Book Cover -->
-      <div class="d-flex justify-center justify-sm-start flex-shrink-0 me-4">
-        <v-card
-          elevation="1"
-          class="rounded overflow-hidden cursor-pointer"
-          width="80"
-          height="115"
-          @click="emit('detail', book)"
+      <div class="cover-wrapper cursor-pointer flex-shrink-0" @click="emit('detail', book)">
+        <v-img
+          :src="cover"
+          width="75"
+          height="110"
+          cover
+          class="book-list-cover rounded-lg"
         >
-          <v-img :src="cover" height="115" cover>
-            <template v-slot:placeholder>
-              <div class="d-flex align-center justify-center fill-height">
-                <v-progress-circular indeterminate size="20" color="primary" />
-              </div>
-            </template>
-            <template v-slot:error>
-              <v-img src="https://via.placeholder.com/120x180?text=No+Cover" height="115" cover />
-            </template>
-          </v-img>
-        </v-card>
+          <template v-slot:placeholder>
+            <div class="d-flex align-center justify-center fill-height bg-slate-100">
+              <v-progress-circular indeterminate size="18" color="primary" />
+            </div>
+          </template>
+          <template v-slot:error>
+            <div class="d-flex align-center justify-center fill-height bg-slate-100">
+              <v-icon icon="mdi-book-outline" size="24" color="grey-lighten-1" />
+            </div>
+          </template>
+        </v-img>
       </div>
 
       <!-- Book Info -->
-      <div class="flex-grow-1 min-width-0">
+      <div class="flex-grow-1 min-w-0">
         <h3
-          class="text-subtitle-1 font-weight-bold text-truncate cursor-pointer text-grey-darken-4"
+          class="book-title text-subtitle-1 font-weight-bold text-truncate cursor-pointer mb-1"
           :title="book.title"
           @click="emit('detail', book)"
         >
           {{ book.title }}
         </h3>
 
-        <div class="text-caption text-primary font-weight-medium mb-1 text-truncate">
-          <v-icon icon="mdi-account-edit" size="x-small" class="me-1" />
-          {{ book.authorName || 'Không rõ tác giả' }}
+        <div class="d-flex align-center text-caption text-primary font-weight-medium mb-2 text-truncate">
+          <v-icon icon="mdi-feather" size="14" class="me-1 flex-shrink-0" />
+          <span>{{ book.authorName || 'Không rõ tác giả' }}</span>
         </div>
 
-        <div class="d-flex flex-wrap align-center gap-2 mt-1">
-          <v-chip size="x-small" variant="outlined" color="grey-darken-2" class="me-2" prepend-icon="mdi-calendar-blank">
-            {{ book.publishYear ? `Xuất bản: ${book.publishYear}` : 'Năm XB: Chưa rõ' }}
-          </v-chip>
+        <div class="d-flex flex-wrap align-center gap-2">
+          <span class="meta-pill">
+            <v-icon icon="mdi-calendar-blank-outline" size="13" class="me-1" />
+            {{ book.publishYear ? `Năm ${book.publishYear}` : 'Năm XB: Chưa rõ' }}
+          </span>
 
-          <v-chip size="x-small" variant="outlined" color="primary" prepend-icon="mdi-identifier">
+          <span class="meta-pill text-slate-500 font-mono">
+            <v-icon icon="mdi-identifier" size="13" class="me-1 text-primary" />
             {{ book.openLibraryId }}
-          </v-chip>
+          </span>
         </div>
       </div>
 
       <!-- Action Buttons -->
-      <div class="d-flex align-center gap-2 flex-shrink-0 mt-2 mt-sm-0">
+      <div class="d-flex align-center gap-2 flex-shrink-0 mt-3 mt-sm-0">
         <v-btn
-          variant="outlined"
-          color="secondary"
+          variant="tonal"
+          color="grey-darken-2"
           size="small"
+          class="btn-rounded text-none px-3"
           prepend-icon="mdi-information-outline"
-          class="text-none me-4"
           @click="emit('detail', book)"
         >
           Chi tiết
@@ -88,23 +90,74 @@ const cover = computed(
           v-if="!inLibrary"
           color="primary"
           size="small"
+          class="btn-rounded btn-gradient-primary text-none px-4"
           prepend-icon="mdi-plus"
-          class="text-none"
           :loading="busy"
           @click="emit('add', book)"
         >
           Thêm vào tủ
         </v-btn>
-        <v-chip
+
+        <div
           v-else
-          color="success"
-          size="small"
-          prepend-icon="mdi-check-circle"
-          label
+          class="added-chip d-flex align-center text-caption font-weight-semibold px-3 py-1 rounded-lg"
         >
-          Đã thêm
-        </v-chip>
+          <v-icon icon="mdi-check-circle" size="16" color="success" class="me-1" />
+          Đã trong tủ
+        </div>
       </div>
     </div>
-  </v-card>
+  </div>
 </template>
+
+<style scoped>
+.search-list-item {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.cover-wrapper {
+  overflow: hidden;
+}
+
+.book-list-cover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease;
+}
+
+.search-list-item:hover .book-list-cover {
+  transform: scale(1.05);
+}
+
+.book-title {
+  color: #0f172a;
+}
+.book-title:hover {
+  color: #2563eb;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.73rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.font-mono {
+  font-family: monospace;
+}
+
+.added-chip {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  height: 32px;
+}
+
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.min-w-0 { min-width: 0; }
+</style>
