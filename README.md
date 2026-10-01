@@ -38,8 +38,8 @@
 
 ## 🖼️ 3. Ảnh chụp Màn hình & Demo
 
-đường dẫn trên git: Mini Reading Tracker\Anh demo
-đường dẫn google drive: https://drive.google.com/drive/folders/1kr9dWxlhtnGPGMVa2dCYNiW4Urq4L_WI?usp=sharing
+* Đường dẫn github: Mini Reading Tracker\Anh demo
+* Đường dẫn google drive: https://drive.google.com/drive/folders/1kr9dWxlhtnGPGMVa2dCYNiW4Urq4L_WI?usp=sharing
 
 ---
 
