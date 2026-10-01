@@ -103,7 +103,7 @@ const cover = computed(
           class="added-chip d-flex align-center text-caption font-weight-semibold px-3 py-1 rounded-lg"
         >
           <v-icon icon="mdi-check-circle" size="16" color="success" class="me-1" />
-          Đã trong tủ
+          Đã thêm
         </div>
       </div>
     </div>
