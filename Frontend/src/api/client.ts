@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { AppError, parseApiError } from '../utils/errorHandler'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
 const apiPrefix = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -18,18 +19,23 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err.message ||
-      'Lỗi không xác định'
-    return Promise.reject(new Error(String(msg)))
+    const errorDetails = parseApiError(err)
+    return Promise.reject(new AppError(errorDetails))
   },
 )
 
-export function unwrap<T>(res: { data: { success: boolean; data: T; message: string } }): T {
-  if (!res.data?.success) throw new Error(res.data?.message || 'Yêu cầu thất bại')
+export function unwrap<T>(res: { data: { success: boolean; data: T; message?: string; error?: string } }): T {
+  if (!res.data?.success) {
+    const errorDetails = parseApiError({
+      response: {
+        status: 400,
+        data: res.data,
+      },
+      message: res.data?.message || 'Yêu cầu thất bại',
+    })
+    throw new AppError(errorDetails)
+  }
   return res.data.data
 }
 
-export default api
+export default api

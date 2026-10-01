@@ -9,13 +9,14 @@ import {
   type AddBookPayload,
 } from '../api/library'
 import type { LibraryEntry, LibraryStats, ReadingStatus } from '../types'
+import { parseApiError, type AppErrorDetails } from '../utils/errorHandler'
 
 export function useLibrary() {
   const entries = ref<LibraryEntry[]>([])
   const stats = ref<LibraryStats>({ total: 0, wantToRead: 0, reading: 0, read: 0 })
   const existingIds = ref<Set<string>>(new Set())
   const loading = ref(false)
-  const error = ref<string | null>(null)
+  const error = ref<AppErrorDetails | null>(null)
   const adding = ref(false)
 
   async function refreshExistingIds(): Promise<void> {
@@ -32,7 +33,7 @@ export function useLibrary() {
     try {
       entries.value = await getLibrary(status, search)
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Lỗi tải tủ sách'
+      error.value = parseApiError(e)
       entries.value = []
     } finally {
       loading.value = false

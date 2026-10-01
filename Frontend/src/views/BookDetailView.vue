@@ -5,6 +5,8 @@ import { getBookDetail } from '../api/books'
 import { addToLibrary } from '../api/library'
 import { useLibrary } from '../composables/useLibrary'
 import type { BookDetail, ReadingStatus } from '../types'
+import ErrorDisplay from '../components/ErrorDisplay.vue'
+import { parseApiError, type AppErrorDetails } from '../utils/errorHandler'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,7 +20,7 @@ const bookId = computed(() => {
 
 const detail = ref<BookDetail | null>(null)
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref<AppErrorDetails | string | null>(null)
 
 const selectedStatus = ref<ReadingStatus>('want_to_read')
 const submitting = ref(false)
@@ -42,7 +44,7 @@ async function loadDetail() {
     detail.value = await getBookDetail(bookId.value)
     await refreshExistingIds()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể tải chi tiết tác phẩm'
+    error.value = parseApiError(e)
     detail.value = null
   } finally {
     loading.value = false
@@ -109,23 +111,12 @@ onMounted(() => {
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-12 px-4">
-      <div class="mx-auto rounded-xl pa-6 border bg-white shadow-sm" style="max-width: 480px;">
-        <v-avatar color="red-lighten-5" size="56" class="mb-3">
-          <v-icon icon="mdi-alert-circle-outline" color="error" size="32" />
-        </v-avatar>
-        <h3 class="text-h6 font-weight-bold mb-2">Không thể tải thông tin</h3>
-        <p class="text-body-2 text-slate-500 mb-4">{{ error }}</p>
-        <v-btn
-          color="primary"
-          class="btn-pill btn-gradient-primary px-6"
-          prepend-icon="mdi-refresh"
-          @click="loadDetail"
-        >
-          Thử lại
-        </v-btn>
-      </div>
-    </div>
+    <ErrorDisplay
+      v-else-if="error"
+      :error="error"
+      :show-home-btn="true"
+      @retry="loadDetail"
+    />
 
     <!-- Empty State -->
     <div v-else-if="!detail" class="text-center py-16 px-4">

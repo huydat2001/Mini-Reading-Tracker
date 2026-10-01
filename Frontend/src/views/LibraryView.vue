@@ -5,6 +5,7 @@ import { useLibrary } from '../composables/useLibrary'
 import type { LibraryEntry, ReadingStatus } from '../types'
 import LibraryBookCard from '../components/LibraryBookCard.vue'
 import ConfirmDeleteDialog from '../components/ConfirmDeleteDialog.vue'
+import ErrorDisplay from '../components/ErrorDisplay.vue'
 
 type FilterTab = 'all' | ReadingStatus
 
@@ -358,23 +359,11 @@ onMounted(() => {
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-12 px-4">
-      <v-card class="mx-auto rounded-xl pa-6 border" max-width="500">
-        <v-avatar color="red-lighten-5" size="56" class="mb-3">
-          <v-icon icon="mdi-alert-circle-outline" color="error" size="32" />
-        </v-avatar>
-        <h3 class="text-h6 font-weight-bold mb-2">Đã xảy ra sự cố</h3>
-        <p class="text-body-2 text-grey-darken-1 mb-4">{{ error }}</p>
-        <v-btn
-          color="primary"
-          class="btn-pill btn-gradient-primary px-6"
-          prepend-icon="mdi-refresh"
-          @click="loadData"
-        >
-          Thử lại
-        </v-btn>
-      </v-card>
-    </div>
+    <ErrorDisplay
+      v-else-if="error"
+      :error="error"
+      @retry="loadData"
+    />
 
     <!-- Empty State -->
     <div v-else-if="entries.length === 0" class="text-center py-16 px-4">

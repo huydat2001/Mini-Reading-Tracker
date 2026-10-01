@@ -4,6 +4,8 @@ import { getBookDetail } from '../api/books'
 import { addToLibrary } from '../api/library'
 import { useLibrary } from '../composables/useLibrary'
 import type { BookDetail, ReadingStatus } from '../types'
+import ErrorDisplay from './ErrorDisplay.vue'
+import { parseApiError, type AppErrorDetails } from '../utils/errorHandler'
 
 const props = defineProps<{
   modelValue: boolean
@@ -19,7 +21,7 @@ const { isInLibrary, refreshExistingIds } = useLibrary()
 
 const detail = ref<BookDetail | null>(null)
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref<AppErrorDetails | string | null>(null)
 
 const selectedStatus = ref<ReadingStatus>('want_to_read')
 const submitting = ref(false)
@@ -46,7 +48,7 @@ async function loadData() {
     detail.value = await getBookDetail(props.openLibraryId)
     await refreshExistingIds()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể tải thông tin chi tiết'
+    error.value = parseApiError(e)
     detail.value = null
   } finally {
     loading.value = false
@@ -145,21 +147,12 @@ function closeDialog() {
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="text-center py-10 px-4">
-        <v-avatar color="red-lighten-5" size="52" class="mb-3">
-          <v-icon icon="mdi-alert-circle-outline" color="error" size="28" />
-        </v-avatar>
-        <p class="text-body-1 font-weight-bold mb-1">Không thể tải thông tin</p>
-        <p class="text-body-2 text-slate-500 mb-4">{{ error }}</p>
-        <v-btn
-          color="primary"
-          class="btn-rounded btn-gradient-primary text-none"
-          prepend-icon="mdi-refresh"
-          @click="loadData"
-        >
-          Thử lại
-        </v-btn>
-      </div>
+      <ErrorDisplay
+        v-else-if="error"
+        :error="error"
+        :compact="true"
+        @retry="loadData"
+      />
 
       <!-- Detail Content -->
       <div v-else-if="detail" class="dialog-body pa-4 pa-sm-6">

@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { searchBooks, getBookDetail, getBooksBySubject } from '../api/books'
 import type { BookSearchItem, BookDetail, SearchParams } from '../types'
+import { parseApiError, type AppErrorDetails } from '../utils/errorHandler'
 
 export function useBooks() {
   const books = ref<BookSearchItem[]>([])
@@ -8,7 +9,7 @@ export function useBooks() {
   const page = ref(1)
   const limit = ref(20)
   const loading = ref(false)
-  const error = ref<string | null>(null)
+  const error = ref<AppErrorDetails | null>(null)
   const currentSubject = ref<string | null>(null)
   const activeParams = ref<SearchParams | string | null>(null)
 
@@ -29,7 +30,7 @@ export function useBooks() {
       total.value = result.total
       page.value = result.page
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Lỗi tìm kiếm'
+      error.value = parseApiError(e)
       books.value = []
       total.value = 0
     } finally {
@@ -49,7 +50,7 @@ export function useBooks() {
       total.value = result.workCount
       page.value = targetPage
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Lỗi tải sách theo chủ đề'
+      error.value = parseApiError(e)
       books.value = []
       total.value = 0
     } finally {
@@ -59,7 +60,7 @@ export function useBooks() {
 
   const detail = ref<BookDetail | null>(null)
   const detailLoading = ref(false)
-  const detailError = ref<string | null>(null)
+  const detailError = ref<AppErrorDetails | null>(null)
 
   async function loadDetail(openLibraryId: string): Promise<BookDetail | null> {
     detailLoading.value = true
@@ -68,7 +69,7 @@ export function useBooks() {
       detail.value = await getBookDetail(openLibraryId)
       return detail.value
     } catch (e) {
-      detailError.value = e instanceof Error ? e.message : 'Lỗi tải chi tiết'
+      detailError.value = parseApiError(e)
       detail.value = null
       return null
     } finally {

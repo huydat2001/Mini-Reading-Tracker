@@ -7,6 +7,8 @@ import type { BookSearchItem, SearchParams } from '../types'
 import BookCard from '../components/BookCard.vue'
 import BookListItem from '../components/BookListItem.vue'
 import BookDetailDialog from '../components/BookDetailDialog.vue'
+import ErrorDisplay from '../components/ErrorDisplay.vue'
+import { parseApiError } from '../utils/errorHandler'
 
 const subjects = [
   { key: 'love', name: 'Tình yêu', icon: 'mdi-heart', color: 'pink' },
@@ -203,11 +205,11 @@ async function handleAdd(book: BookSearchItem) {
     await refreshExistingIds()
     snackbar.value = { show: true, text: `Đã thêm "${book.title}" vào tủ`, color: 'success' }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Thêm thất bại'
-    const isConflict = msg.includes('đã có trong tủ')
+    const errDetails = parseApiError(e)
+    const isConflict = errDetails.type === 'conflict' || errDetails.statusCode === 409
     snackbar.value = {
       show: true,
-      text: isConflict ? `"${book.title}" đã có trong tủ` : msg,
+      text: isConflict ? `"${book.title}" đã có trong tủ sách` : errDetails.message,
       color: isConflict ? 'warning' : 'error',
     }
     if (isConflict) await refreshExistingIds()
@@ -466,7 +468,7 @@ onMounted(() => {
           <span>Đang tìm kiếm sách...</span>
         </template>
         <template v-else-if="error">
-          <span class="text-error font-weight-medium">{{ error }}</span>
+          <span class="text-error font-weight-medium">{{ error.message }}</span>
         </template>
         <template v-else-if="hasSearched">
           <span>
@@ -522,23 +524,11 @@ onMounted(() => {
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-12 px-4">
-      <div class="mx-auto rounded-xl pa-6 border bg-white shadow-sm" style="max-width: 480px;">
-        <v-avatar color="red-lighten-5" size="56" class="mb-3">
-          <v-icon icon="mdi-alert-circle-outline" color="error" size="32" />
-        </v-avatar>
-        <h3 class="text-h6 font-weight-bold mb-2">Đã xảy ra sự cố</h3>
-        <p class="text-body-2 text-slate-500 mb-4">{{ error }}</p>
-        <v-btn
-          color="primary"
-          class="btn-pill btn-gradient-primary px-6"
-          prepend-icon="mdi-refresh"
-          @click="retry"
-        >
-          Thử lại
-        </v-btn>
-      </div>
-    </div>
+    <ErrorDisplay
+      v-else-if="error"
+      :error="error"
+      @retry="retry"
+    />
 
     <!-- Empty State -->
     <div v-else-if="books.length === 0" class="text-center py-16 px-4">
